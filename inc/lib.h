@@ -17,12 +17,9 @@
 #include <inc/memlayout.h>
 #include <inc/syscall.h>
 #include <inc/trap.h>
-<<<<<<< HEAD:inc/lib.h
 #include <inc/fs.h>
 #include <inc/fd.h>
 #include <inc/args.h>
-=======
->>>>>>> master:inc/lib.h
 
 #define USED(x)		(void)(x)
 
@@ -79,7 +76,6 @@ int32_t ipc_recv(envid_t *from_env_store, void *pg, int *perm_store);
 envid_t	fork(void);
 envid_t	sfork(void);	// Challenge!
 
-<<<<<<< HEAD:inc/lib.h
 // fd.c
 int	close(int fd);
 ssize_t	read(int fd, void *buf, size_t nbytes);
@@ -113,8 +109,6 @@ int	pageref(void *addr);
 // spawn.c
 envid_t	spawn(const char *program, const char **argv);
 envid_t	spawnl(const char *program, const char *arg0, ...);
-=======
->>>>>>> master:inc/lib.h
 
 
 /* File open modes */

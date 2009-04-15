@@ -35,11 +35,7 @@ struct Env;
 	(void*) (__m_pa + KERNBASE);				\
 })
 
-<<<<<<< HEAD:kern/pmap.h
 
-
-=======
->>>>>>> master:kern/pmap.h
 extern char bootstacktop[], bootstack[];
 
 extern struct Page *pages;
@@ -55,23 +51,14 @@ void	i386_vm_init();
 void	i386_detect_memory();
 
 void	page_init(void);
-<<<<<<< HEAD:kern/pmap.h
-int	page_alloc(struct Page **pp_store);
-void	page_free(struct Page *pp);
-=======
 void	page_check(void);
 int	pages_alloc(struct Page **pp_store, int order);
 void	pages_free(struct Page *pp, int order);
 int	get_order(unsigned long size);
->>>>>>> master:kern/pmap.h
 int	page_insert(pde_t *pgdir, struct Page *pp, void *va, int perm);
 void	page_remove(pde_t *pgdir, void *va);
-<<<<<<< HEAD:kern/pmap.h
-struct Page *page_lookup(pde_t *pgdir, void *va, pte_t **pte_store);
-=======
 struct 	Page *page_lookup(pde_t *pgdir, void *va, pte_t **pte_store);
 int	page_map_segment(pde_t *pgdir, struct Page *pp, void *va, size_t size, int perm);
->>>>>>> master:kern/pmap.h
 void	page_decref(struct Page *pp);
 
 void	tlb_invalidate(pde_t *pgdir, void *va);
@@ -85,15 +72,12 @@ page2ppn(struct Page *pp)
 	return pp - pages;
 }
 
-<<<<<<< HEAD:kern/pmap.h
-=======
 static inline struct Page*
 ppn2page(ppn_t pp)
 {
 	return pages + pp;
 }
 
->>>>>>> master:kern/pmap.h
 static inline physaddr_t
 page2pa(struct Page *pp)
 {
@@ -114,18 +98,14 @@ page2kva(struct Page *pp)
 	return KADDR(page2pa(pp));
 }
 
-<<<<<<< HEAD:kern/pmap.h
-=======
 static inline struct Page*
 kva2page(uintptr_t kva)
 {
 	return pa2page(PADDR(kva));
 }
 
->>>>>>> master:kern/pmap.h
 pte_t *pgdir_walk(pde_t *pgdir, const void *va, int create);
-<<<<<<< HEAD:kern/pmap.h
-=======
+
 void dump_mapping(uintptr_t from, uintptr_t to);
 void dump_phys(physaddr_t paddr, size_t len, size_t word);
 void dump_virt(physaddr_t vaddr, size_t len, size_t word);
@@ -137,6 +117,5 @@ void 	pages_free(struct Page *pp, int order);
 int 	pages_alloc(struct Page **pp_store, int order);
 
 void 	buddy_info(void);
->>>>>>> master:kern/pmap.h
 
 #endif /* !JOS_KERN_PMAP_H */

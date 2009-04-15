@@ -30,19 +30,13 @@ i386_init(void)
 
 	cprintf("6828 decimal is %o octal!\n", 6828);
 
-<<<<<<< HEAD:kern/init.c
-=======
 	enable_sep();
 
->>>>>>> master:kern/init.c
 	// Lab 2 memory management initialization functions
 	i386_detect_memory();
 	i386_vm_init();
-<<<<<<< HEAD:kern/init.c
-=======
 	page_init();
 	page_check();
->>>>>>> master:kern/init.c
 
 	// Lab 3 user environment initialization functions
 	env_init();
@@ -55,13 +49,6 @@ i386_init(void)
 	// Should always have an idle process as first one.
 	ENV_CREATE(user_idle);
 
-<<<<<<< HEAD:kern/init.c
-	// Start fs.
-	ENV_CREATE(fs_fs);
-
-	// Start init
-=======
->>>>>>> master:kern/init.c
 #if defined(TEST)
 	// Don't touch -- used by grading script!
 	ENV_CREATE2(TEST, TESTSIZE);
@@ -70,17 +57,8 @@ i386_init(void)
 	ENV_CREATE(user_primes);
 #endif // TEST*
 
-<<<<<<< HEAD:kern/init.c
-
-=======
->>>>>>> master:kern/init.c
 	// Schedule and run the first user environment!
 	sched_yield();
-<<<<<<< HEAD:kern/init.c
-
-
-=======
->>>>>>> master:kern/init.c
 }
 
 

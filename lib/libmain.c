@@ -12,15 +12,8 @@ void
 libmain(int argc, char **argv)
 {
 	// set env to point at our env structure in envs[].
-	// LAB 3: Your code here.
-<<<<<<< HEAD:lib/libmain.c
-	env = 0;
-=======
 	envid_t id = sys_getenvid();
 	env = &envs[ENVX(id)];
-
-	//asm volatile("sysenter");
->>>>>>> master:lib/libmain.c
 
 	// save the name of the program so that panic() can use it
 	if (argc > 0)

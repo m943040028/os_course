@@ -80,10 +80,7 @@
 
 // All physical memory mapped at this address
 #define	KERNBASE	0xF0000000
-<<<<<<< HEAD:inc/memlayout.h
-=======
 #define MAXADDR		~0x0
->>>>>>> master:inc/memlayout.h
 
 // At IOPHYSMEM (640K) there is a 384K hole for I/O.  From the kernel,
 // IOPHYSMEM can be addressed at KERNBASE + IOPHYSMEM.  The hole ends
@@ -151,8 +148,6 @@
  * A second consequence is that the contents of the current page directory
  * will always be available at virtual address (VPT + (VPT >> PGSHIFT)), to
  * which vpd is set in entry.S.
-<<<<<<< HEAD:inc/memlayout.h
-=======
  *
  *           Page Directory          Page Table
  *           +------------+
@@ -176,7 +171,6 @@
  *                       |     PTE    | <-- vpt[2047]
  *                       +------------+
  *
->>>>>>> master:inc/memlayout.h
  */
 typedef uint32_t pte_t;
 typedef uint32_t pde_t;
@@ -203,10 +197,6 @@ struct Page {
 	// to this page, for pages allocated using page_alloc.
 	// Pages allocated at boot time using pmap.c's
 	// boot_alloc do not have valid reference count fields.
-<<<<<<< HEAD:inc/memlayout.h
-
-=======
->>>>>>> master:inc/memlayout.h
 	uint16_t pp_ref;
 };
 

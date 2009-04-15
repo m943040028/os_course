@@ -2,15 +2,12 @@
 
 #include <inc/string.h>
 
-<<<<<<< HEAD:lib/string.c
 // Using assembly for memset/memmove
 // makes some difference on real hardware,
 // but it makes an even bigger difference on bochs.
 // Primespipe runs 3x faster this way.
 #define ASM 1
 
-=======
->>>>>>> master:lib/string.c
 int
 strlen(const char *s)
 {
@@ -112,26 +109,12 @@ strfind(const char *s, char c)
 	return (char *) s;
 }
 
-<<<<<<< HEAD:lib/string.c
 #if ASM
-=======
-
->>>>>>> master:lib/string.c
 void *
 memset(void *v, int c, size_t n)
 {
 	char *p;
-<<<<<<< HEAD:lib/string.c
-=======
-	int m;
 
-	p = v;
-	m = n;
-	while (--m >= 0)
-		*p++ = c;
->>>>>>> master:lib/string.c
-
-<<<<<<< HEAD:lib/string.c
 	if (n == 0)
 		return v;
 	if ((int)v%4 == 0 && n%4 == 0) {
@@ -144,28 +127,18 @@ memset(void *v, int c, size_t n)
 		asm volatile("cld; rep stosb\n"
 			:: "D" (v), "a" (c), "c" (n)
 			: "cc", "memory");
-=======
->>>>>>> master:lib/string.c
 	return v;
 }
 
 void *
-<<<<<<< HEAD:lib/string.c
 memmove(void *dst, const void *src, size_t n)
-=======
-memcpy(void *dst, const void *src, size_t n)
->>>>>>> master:lib/string.c
 {
 	const char *s;
 	char *d;
-<<<<<<< HEAD:lib/string.c
-	
-=======
 
->>>>>>> master:lib/string.c
 	s = src;
 	d = dst;
-<<<<<<< HEAD:lib/string.c
+
 	if (s < d && s + n > d) {
 		s += n;
 		d += n;
@@ -198,23 +171,10 @@ memset(void *v, int c, size_t n)
 	m = n;
 	while (--m >= 0)
 		*p++ = c;
-=======
-	while (n-- > 0)
-		*d++ = *s++;
->>>>>>> master:lib/string.c
-
-<<<<<<< HEAD:lib/string.c
 	return v;
-=======
-	return dst;
->>>>>>> master:lib/string.c
 }
 
-<<<<<<< HEAD:lib/string.c
 /* no memcpy - use memmove instead */
-
-=======
->>>>>>> master:lib/string.c
 void *
 memmove(void *dst, const void *src, size_t n)
 {
@@ -234,7 +194,6 @@ memmove(void *dst, const void *src, size_t n)
 
 	return dst;
 }
-<<<<<<< HEAD:lib/string.c
 #endif
 
 /* sigh - gcc emits references to this for structure assignments! */
@@ -244,8 +203,6 @@ memcpy(void *dst, void *src, size_t n)
 {
 	return memmove(dst, src, n);
 }
-=======
->>>>>>> master:lib/string.c
 
 int
 memcmp(const void *v1, const void *v2, size_t n)

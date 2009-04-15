@@ -9,8 +9,6 @@
 #include <kern/pmap.h>
 #include <kern/kclock.h>
 #include <kern/env.h>
-<<<<<<< HEAD:kern/pmap.c
-=======
 #include <kern/buddy.h>
 
 #define KDEBUG
@@ -19,8 +17,6 @@
 
 // physical contiguous page freelist sized from 2^0 to 2^MAX_ORDER
 static struct Page_list page_free_list[MAX_ORDER + 1];
-
->>>>>>> master:kern/pmap.c
 
 // These variables are set by i386_detect_memory()
 static physaddr_t maxpa;	// Maximum physical address
@@ -34,10 +30,6 @@ physaddr_t boot_cr3;		// Physical address of boot time page directory
 static char* boot_freemem;	// Pointer to next byte of free mem
 
 struct Page* pages;		// Virtual address of physical page array
-<<<<<<< HEAD:kern/pmap.c
-static struct Page_list page_free_list;	// Free list of physical pages
-=======
->>>>>>> master:kern/pmap.c
 
 // Global descriptor table.
 //
@@ -101,12 +93,7 @@ i386_detect_memory(void)
 // --------------------------------------------------------------
 
 static void check_boot_pgdir(void);
-<<<<<<< HEAD:kern/pmap.c
-static void check_page_alloc();
-static void page_check(void);
 static void boot_map_segment(pde_t *pgdir, uintptr_t la, size_t size, physaddr_t pa, int perm);
-=======
->>>>>>> master:kern/pmap.c
 
 //
 // A simple physical memory allocator, used only a few times
@@ -140,10 +127,6 @@ boot_alloc(uint32_t n, uint32_t align)
 	//	Step 2: save current value of boot_freemem as allocated chunk
 	//	Step 3: increase boot_freemem to record allocation
 	//	Step 4: return allocated chunk
-
-<<<<<<< HEAD:kern/pmap.c
-	return NULL;
-=======
 	boot_freemem = ROUNDUP(boot_freemem, align);
 
 	v = boot_freemem;
@@ -246,7 +229,6 @@ boot_map_segment(pde_t *pgdir, uintptr_t la, size_t size, physaddr_t pa, int per
 			first = 0;
 		}
 	}
->>>>>>> master:kern/pmap.c
 }
 
 // Set up a two-level page table:
@@ -265,22 +247,12 @@ void
 i386_vm_init(void)
 {
 	pde_t* pgdir;
-<<<<<<< HEAD:kern/pmap.c
-	uint32_t cr0;
-	size_t n;
-=======
 	int i;
 	physaddr_t paddr;
->>>>>>> master:kern/pmap.c
 
-<<<<<<< HEAD:kern/pmap.c
-	// Delete this line:
-	panic("i386_vm_init: This function is not finished\n");
-=======
 	int page_array_size, env_array_size;
 	uint32_t cr0, cr4;
 	size_t n;
->>>>>>> master:kern/pmap.c
 
 	//////////////////////////////////////////////////////////////////////
 	// create initial page directory.
@@ -303,19 +275,6 @@ i386_vm_init(void)
 	pgdir[PDX(UVPT)] = PADDR(pgdir)|PTE_U|PTE_P;
 
 	//////////////////////////////////////////////////////////////////////
-<<<<<<< HEAD:kern/pmap.c
-	// Make 'pages' point to an array of size 'npage' of 'struct Page'.
-	// The kernel uses this structure to keep track of physical pages;
-	// 'npage' equals the number of physical pages in memory.  User-level
-	// programs will get read-only access to the array as well.
-	// You must allocate the array yourself.
-	// Your code goes here: 
-
-
-	//////////////////////////////////////////////////////////////////////
-	// Make 'envs' point to an array of size 'NENV' of 'struct Env'.
-	// LAB 3: Your code here.
-=======
 	// Map the kernel stack (symbol name "bootstack").  The complete VA
 	// range of the stack, [KSTACKTOP-PTSIZE, KSTACKTOP), breaks into two
 	// pieces:
@@ -324,29 +283,14 @@ i386_vm_init(void)
 	//     Permissions: kernel RW, user NONE
 	boot_map_segment(pgdir, KSTACKTOP-KSTKSIZE, KSTKSIZE, 
 			PADDR(bootstack), PTE_W);
->>>>>>> master:kern/pmap.c
 
 	//////////////////////////////////////////////////////////////////////
-<<<<<<< HEAD:kern/pmap.c
-	// Now that we've allocated the initial kernel data structures, we set
-	// up the list of free physical pages. Once we've done so, all further
-	// memory management will go through the page_* functions. In
-	// particular, we can now map memory using boot_map_segment or page_insert
-	page_init();
-
-        check_page_alloc();
-=======
 	// Map all of physical memory at KERNBASE. 
 	// Ie.  the VA range [KERNBASE, 2^32) should map to
 	//      the PA range [0, 2^32 - KERNBASE)
 	// We might not have 2^32 - KERNBASE bytes of physical memory, but
 	// we just set up the mapping anyway.
 	// Permissions: kernel RW, user NONE
->>>>>>> master:kern/pmap.c
-
-<<<<<<< HEAD:kern/pmap.c
-	page_check();
-=======
 	// We use a 4MB superpage to save memory.
 	// Super page is valid when 
 	//   1) PAE(Page Address Extension) in CR4 is disabled,
@@ -354,29 +298,16 @@ i386_vm_init(void)
 	paddr = 0x0;
 	for (i = PDX(KERNBASE); i <= PDX(MAXADDR); i++, paddr += PTSIZE)
 		pgdir[i] = paddr|PTE_W|PTE_P|PTE_PS;
->>>>>>> master:kern/pmap.c
 
 	//////////////////////////////////////////////////////////////////////
-<<<<<<< HEAD:kern/pmap.c
-	// Now we set up virtual memory 
-	
-	//////////////////////////////////////////////////////////////////////
-	// Map 'pages' read-only by the user at linear address UPAGES
-=======
 	// Make 'pages' point to an array of size 'npage' of 'struct Page'.
 	// The kernel uses this structure to keep track of physical pages;
 	// 'npage' equals the number of physical pages in memory.  User-level
 	// programs get read-only access to the array as well.
 	// You must allocate the array yourself.
 	// Map this array read-only by the user at linear address UPAGES
->>>>>>> master:kern/pmap.c
 	// (ie. perm = PTE_U | PTE_P)
 	// Permissions:
-<<<<<<< HEAD:kern/pmap.c
-	//    - the new image at UPAGES -- kernel R, user R
-	//    - pages itself -- kernel RW, user NONE
-	// Your code goes here:
-=======
 	//    - pages -- kernel RW, user NONE
 	//    - the read-only version mapped at UPAGES -- kernel R, user R
 	page_array_size = ROUNDUP(sizeof(struct Page) * npage, PGSIZE);
@@ -387,53 +318,18 @@ i386_vm_init(void)
 	memset(pages, 0xff, sizeof(struct Page) * npage);
 
 	boot_map_segment(pgdir, UPAGES, page_array_size, PADDR(pages), PTE_U);
->>>>>>> master:kern/pmap.c
 
 	//////////////////////////////////////////////////////////////////////
-<<<<<<< HEAD:kern/pmap.c
-	// Map the 'envs' array read-only by the user at linear address UENVS
-=======
 	// Make 'envs' point to an array of size 'NENV' of 'struct Env'.
 	// Map this array read-only by the user at linear address UENVS
->>>>>>> master:kern/pmap.c
 	// (ie. perm = PTE_U | PTE_P).
 	// Permissions:
-<<<<<<< HEAD:kern/pmap.c
-	//    - the new image at UENVS  -- kernel R, user R
-=======
->>>>>>> master:kern/pmap.c
 	//    - envs itself -- kernel RW, user NONE
-<<<<<<< HEAD:kern/pmap.c
-=======
 	//    - the image of envs mapped at UENVS  -- kernel R, user R
 	env_array_size = ROUNDUP(sizeof(struct Env) * NENV, PGSIZE);
 	envs = boot_alloc(env_array_size, PGSIZE);
 	memset(envs, 0x0, sizeof(struct Env) * NENV);
->>>>>>> master:kern/pmap.c
-
-<<<<<<< HEAD:kern/pmap.c
-
-	//////////////////////////////////////////////////////////////////////
-        // Use the physical memory that bootstack refers to as
-        // the kernel stack.  The complete VA
-	// range of the stack, [KSTACKTOP-PTSIZE, KSTACKTOP), breaks into two
-	// pieces:
-	//     * [KSTACKTOP-KSTKSIZE, KSTACKTOP) -- backed by physical memory
-	//     * [KSTACKTOP-PTSIZE, KSTACKTOP-KSTKSIZE) -- not backed => faults
-	//     Permissions: kernel RW, user NONE
-	// Your code goes here:
-
-	//////////////////////////////////////////////////////////////////////
-	// Map all of physical memory at KERNBASE. 
-	// Ie.  the VA range [KERNBASE, 2^32) should map to
-	//      the PA range [0, 2^32 - KERNBASE)
-	// We might not have 2^32 - KERNBASE bytes of physical memory, but
-	// we just set up the amapping anyway.
-	// Permissions: kernel RW, user NONE
-	// Your code goes here: 
-=======
 	boot_map_segment(pgdir, UENVS, env_array_size, PADDR(envs), PTE_U);
->>>>>>> master:kern/pmap.c
 
 	// Check that the initial page directory has been set up correctly.
 	check_boot_pgdir();
@@ -459,14 +355,11 @@ i386_vm_init(void)
 	// Install page table.
 	lcr3(boot_cr3);
 
-<<<<<<< HEAD:kern/pmap.c
-=======
 	// Enable PSE.
 	cr4 = rcr4();
 	cr4 |= CR4_PSE;
 	lcr4(cr4);
 
->>>>>>> master:kern/pmap.c
 	// Turn on paging.
 	cr0 = rcr0();
 	cr0 |= CR0_PE|CR0_PG|CR0_AM|CR0_WP|CR0_NE|CR0_TS|CR0_EM|CR0_MP;
@@ -497,69 +390,6 @@ i386_vm_init(void)
 }
 
 //
-<<<<<<< HEAD:kern/pmap.c
-// Check the physical page allocator (page_alloc(), page_free(),
-// and page_init()).
-//
-static void
-check_page_alloc()
-{
-	struct Page *pp, *pp0, *pp1, *pp2;
-	struct Page_list fl;
-	
-        // if there's a page that shouldn't be on
-        // the free list, try to make sure it
-        // eventually causes trouble.
-	LIST_FOREACH(pp0, &page_free_list, pp_link)
-		memset(page2kva(pp0), 0x97, 128);
-
-	// should be able to allocate three pages
-	pp0 = pp1 = pp2 = 0;
-	assert(page_alloc(&pp0) == 0);
-	assert(page_alloc(&pp1) == 0);
-	assert(page_alloc(&pp2) == 0);
-
-	assert(pp0);
-	assert(pp1 && pp1 != pp0);
-	assert(pp2 && pp2 != pp1 && pp2 != pp0);
-        assert(page2pa(pp0) < npage*PGSIZE);
-        assert(page2pa(pp1) < npage*PGSIZE);
-        assert(page2pa(pp2) < npage*PGSIZE);
-
-	// temporarily steal the rest of the free pages
-	fl = page_free_list;
-	LIST_INIT(&page_free_list);
-
-	// should be no free memory
-	assert(page_alloc(&pp) == -E_NO_MEM);
-
-        // free and re-allocate?
-        page_free(pp0);
-        page_free(pp1);
-        page_free(pp2);
-	pp0 = pp1 = pp2 = 0;
-	assert(page_alloc(&pp0) == 0);
-	assert(page_alloc(&pp1) == 0);
-	assert(page_alloc(&pp2) == 0);
-	assert(pp0);
-	assert(pp1 && pp1 != pp0);
-	assert(pp2 && pp2 != pp1 && pp2 != pp0);
-	assert(page_alloc(&pp) == -E_NO_MEM);
-
-	// give free list back
-	page_free_list = fl;
-
-	// free the pages we took
-	page_free(pp0);
-	page_free(pp1);
-	page_free(pp2);
-
-	cprintf("check_page_alloc() succeeded!\n");
-}
-
-//
-=======
->>>>>>> master:kern/pmap.c
 // Checks that the kernel part of virtual address space
 // has been setup roughly correctly(by i386_vm_init()).
 //
@@ -588,11 +418,7 @@ check_boot_pgdir(void)
 		assert(check_va2pa(pgdir, UENVS + i) == PADDR(envs) + i);
 
 	// check phys mem
-<<<<<<< HEAD:kern/pmap.c
-	for (i = 0; i < npage * PGSIZE; i += PGSIZE)
-=======
 	for (i = 0; KERNBASE + i != 0; i += PTSIZE)
->>>>>>> master:kern/pmap.c
 		assert(check_va2pa(pgdir, KERNBASE + i) == i);
 
 	// check kernel stack
@@ -633,12 +459,9 @@ check_va2pa(pde_t *pgdir, uintptr_t va)
 	pgdir = &pgdir[PDX(va)];
 	if (!(*pgdir & PTE_P))
 		return ~0;
-<<<<<<< HEAD:kern/pmap.c
-=======
 	else if (*pgdir & PTE_PS)
 		return PTE_ADDR(*pgdir);
 
->>>>>>> master:kern/pmap.c
 	p = (pte_t*) KADDR(PTE_ADDR(*pgdir));
 	if (!(p[PTX(va)] & PTE_P))
 		return ~0;
@@ -655,11 +478,7 @@ check_va2pa(pde_t *pgdir, uintptr_t va)
 // Initialize page structure and memory free list.
 // After this point, ONLY use the functions below
 // to allocate and deallocate physical memory via the page_free_list,
-<<<<<<< HEAD:kern/pmap.c
-// and NEVER use boot_alloc()
-=======
 // and NEVER use boot_alloc() or the related boot-time functions above.
->>>>>>> master:kern/pmap.c
 //
 void
 page_init(void)
@@ -677,11 +496,6 @@ page_init(void)
 	//     Which pages are used for page tables and other data structures?
 	//
 	// Change the code to reflect this.
-<<<<<<< HEAD:kern/pmap.c
-	int i;
-	LIST_INIT(&page_free_list);
-	for (i = 0; i < npage; i++) {
-=======
 	int i, npages = 0;
 	struct Page *pp = &pages[0];
 	for (i = 0; i < MAX_ORDER; i++)
@@ -693,17 +507,10 @@ page_init(void)
 
 	// base useable memory
 	for (i = 1; i < PPN(basemem); i++) {
->>>>>>> master:kern/pmap.c
 		pages[i].pp_ref = 0;
-<<<<<<< HEAD:kern/pmap.c
-		LIST_INSERT_HEAD(&page_free_list, &pages[i], pp_link);
-=======
 		page_free(&pages[i]);
 		npages++;
->>>>>>> master:kern/pmap.c
 	}
-<<<<<<< HEAD:kern/pmap.c
-=======
 
         //
         //    Current Physical Memory Layout:
@@ -736,7 +543,6 @@ page_init(void)
 	k_debug_msg_on();
 #endif
 	cprintf("Total usable memory: %d KB\n", npages * PGSIZE / 1024);
->>>>>>> master:kern/pmap.c
 }
 
 //
@@ -751,11 +557,7 @@ page_initpp(struct Page *pp)
 }
 
 //
-<<<<<<< HEAD:kern/pmap.c
-// Allocates a physical page.
-=======
 // Allocates contiguous physical pages.
->>>>>>> master:kern/pmap.c
 // Does NOT set the contents of the physical page to zero -
 // the caller must do that if necessary.
 //
@@ -769,16 +571,8 @@ page_initpp(struct Page *pp)
 // Hint: use LIST_FIRST, LIST_REMOVE, and page_initpp
 // Hint: pp_ref should not be incremented 
 int
-<<<<<<< HEAD:kern/pmap.c
-page_alloc(struct Page **pp_store)
-=======
 pages_alloc(struct Page **pp_store, int order)
->>>>>>> master:kern/pmap.c
 {
-<<<<<<< HEAD:kern/pmap.c
-	// Fill this function in
-	return -E_NO_MEM;
-=======
 	int i;
 	int cur_order = order;
 
@@ -826,21 +620,13 @@ pages_alloc(struct Page **pp_store, int order)
 	}
 
 	return 0;
->>>>>>> master:kern/pmap.c
 }
 
 //
-<<<<<<< HEAD:kern/pmap.c
-// Return a page to the free list.
-=======
 // Return contiguous pages to the free list.
->>>>>>> master:kern/pmap.c
 // (This function should only be called when pp->pp_ref reaches 0.)
 //
 void
-<<<<<<< HEAD:kern/pmap.c
-page_free(struct Page *pp)
-=======
 pages_free(struct Page *pp, int order)
 {
 	int i;
@@ -884,11 +670,7 @@ cannot_merge:
 
 inline int 
 get_order(unsigned long size)
->>>>>>> master:kern/pmap.c
 {
-<<<<<<< HEAD:kern/pmap.c
-	// Fill this function in
-=======
 	int order;
 
 	size = (size-1) >> (PGSHIFT-1);
@@ -898,11 +680,8 @@ get_order(unsigned long size)
 		order++;
 	} while (size);
 	return order;
->>>>>>> master:kern/pmap.c
 }
 
-<<<<<<< HEAD:kern/pmap.c
-=======
 void
 buddy_info(void)
 {
@@ -925,7 +704,7 @@ buddy_info(void)
 	}
 	cprintf("Avalible memory: %d KB\n", npages * PGSIZE / 1024);
 }
->>>>>>> master:kern/pmap.c
+
 //
 // Decrement the reference count on a page,
 // freeing it if there are no more refs.
@@ -945,10 +724,6 @@ page_decref(struct Page* pp)
 //    - If create == 0, pgdir_walk returns NULL.
 //    - Otherwise, pgdir_walk tries to allocate a new page table
 //	with page_alloc.  If this fails, pgdir_walk returns NULL.
-<<<<<<< HEAD:kern/pmap.c
-//    - pgdir_walk sets pp_ref to 1 for the new page table.
-//    - Finally, pgdir_walk returns a pointer into the new page table.
-=======
 //    - Otherwise, pgdir_walk returns a pointer into the new page table.
 //    - If the request address is in Remapped Physical Memory
 //      (addr > KERNBASE, which has PS flag set to reduce memory consumption)
@@ -956,7 +731,6 @@ page_decref(struct Page* pp)
 //
 // This is boot_pgdir_walk, but using page_alloc() instead of boot_alloc().
 // Unlike boot_pgdir_walk, pgdir_walk can fail.
->>>>>>> master:kern/pmap.c
 //
 // Hint: you can turn a Page * into the physical address of the
 // page it refers to with page2pa() from kern/pmap.h.
@@ -967,9 +741,6 @@ page_decref(struct Page* pp)
 pte_t *
 pgdir_walk(pde_t *pgdir, const void *va, int create)
 {
-<<<<<<< HEAD:kern/pmap.c
-	// Fill this function in
-=======
 	pde_t *pde = &pgdir[PDX(va)];
 	struct Page *new;
 
@@ -1004,7 +775,6 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 		}
 
 pgdir_walk_fail:
->>>>>>> master:kern/pmap.c
 	return NULL;
 }
 
@@ -1023,10 +793,7 @@ pgdir_walk_fail:
 // RETURNS: 
 //   0 on success
 //   -E_NO_MEM, if page table couldn't be allocated
-<<<<<<< HEAD:kern/pmap.c
-=======
 //   -E_INVAL, if invalid argument given
->>>>>>> master:kern/pmap.c
 //
 // Hint: The TA solution is implemented using pgdir_walk, page_remove,
 // and page2pa.
@@ -1034,31 +801,9 @@ pgdir_walk_fail:
 int
 page_insert(pde_t *pgdir, struct Page *pp, void *va, int perm) 
 {
-<<<<<<< HEAD:kern/pmap.c
-	// Fill this function in
-	return 0;
-}
-=======
 	int ret = 0;
 	pte_t *pte;
->>>>>>> master:kern/pmap.c
 
-<<<<<<< HEAD:kern/pmap.c
-//
-// Map [la, la+size) of linear address space to physical [pa, pa+size)
-// in the page table rooted at pgdir.  Size is a multiple of PGSIZE.
-// Use permission bits perm|PTE_P for the entries.
-//
-// This function is only intended to set up the ``static'' mappings
-// above UTOP. As such, it should *not* change the pp_ref field on the
-// mapped pages.
-//
-// Hint: the TA solution uses pgdir_walk
-static void
-boot_map_segment(pde_t *pgdir, uintptr_t la, size_t size, physaddr_t pa, int perm)
-{
-	// Fill this function in
-=======
 	// If PTE_PS is used for physical memory remapping, this function
 	// can not be called with va >= KERNBASE, since two level page
 	// table is assumed, and those mappings should not be modified.
@@ -1090,7 +835,6 @@ boot_map_segment(pde_t *pgdir, uintptr_t la, size_t size, physaddr_t pa, int per
 		ret = -E_NO_MEM;
 
 	return ret;
->>>>>>> master:kern/pmap.c
 }
 
 //
@@ -1106,9 +850,6 @@ boot_map_segment(pde_t *pgdir, uintptr_t la, size_t size, physaddr_t pa, int per
 struct Page *
 page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 {
-<<<<<<< HEAD:kern/pmap.c
-	// Fill this function in
-=======
 	pte_t *pte;
 
 	// for kernal address, use kva2page() instead
@@ -1126,7 +867,6 @@ page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 	}
 
 	// current va doesn't have a page table
->>>>>>> master:kern/pmap.c
 	return NULL;
 }
 
@@ -1148,9 +888,6 @@ page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 void
 page_remove(pde_t *pgdir, void *va)
 {
-<<<<<<< HEAD:kern/pmap.c
-	// Fill this function in
-=======
 	struct Page *target;
 	pte_t *pte;
 
@@ -1193,7 +930,6 @@ page_map_segment(pde_t *pgdir, struct Page *pp, void *va, size_t size, int perm)
 	}
 
 	return 0;
->>>>>>> master:kern/pmap.c
 }
 
 //
@@ -1228,17 +964,11 @@ static uintptr_t user_mem_check_addr;
 // Returns 0 if the user program can access this range of addresses,
 // and -E_FAULT otherwise.
 //
-<<<<<<< HEAD:kern/pmap.c
-=======
 // Hint: The TA solution uses pgdir_walk.
 //
->>>>>>> master:kern/pmap.c
 int
 user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 {
-<<<<<<< HEAD:kern/pmap.c
-	// LAB 3: Your code here. 
-=======
 	const void *end = va + len;
 
 	if ((uintptr_t)va >= ULIM)
@@ -1254,16 +984,12 @@ user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 			goto check_failed;
 		va += PGSIZE;
 	}
->>>>>>> master:kern/pmap.c
 
 	return 0;
-<<<<<<< HEAD:kern/pmap.c
-=======
 
 check_failed:
 	user_mem_check_addr = (uintptr_t) va;
 	return -E_FAULT;
->>>>>>> master:kern/pmap.c
 }
 
 //
@@ -1282,9 +1008,6 @@ user_mem_assert(struct Env *env, const void *va, size_t len, int perm)
 	}
 }
 
-<<<<<<< HEAD:kern/pmap.c
-// check page_insert, page_remove, &c
-=======
 //
 // print the content of given page table/directory entry
 // retrun 1 if associated page/page table is present
@@ -1391,10 +1114,8 @@ dump_mapping(uintptr_t from, uintptr_t to)
 //
 // vaddr should be page-aligned
 // word can be 1, 2, 4
->>>>>>> master:kern/pmap.c
+
 static void
-<<<<<<< HEAD:kern/pmap.c
-=======
 dump_content(uintptr_t vaddr, int print_phys, size_t len, size_t word)
 {
 
@@ -1484,23 +1205,16 @@ dump_phys(physaddr_t paddr, size_t len, size_t word)
 }
 
 void
->>>>>>> master:kern/pmap.c
+
 page_check(void)
 {
 	struct Page *pp, *pp0, *pp1, *pp2;
-<<<<<<< HEAD:kern/pmap.c
-	struct Page_list fl;
-=======
 	struct Page_list fl[MAX_ORDER + 1];
 	struct Page *saved_pages;
->>>>>>> master:kern/pmap.c
 	pte_t *ptep, *ptep1;
 	void *va;
 	int i;
-<<<<<<< HEAD:kern/pmap.c
-=======
 	int page_array_size = sizeof(struct Page) * npage;
->>>>>>> master:kern/pmap.c
 
 	// should be able to allocate three pages
 	pp0 = pp1 = pp2 = 0;
@@ -1512,24 +1226,16 @@ page_check(void)
 	assert(pp1 && pp1 != pp0);
 	assert(pp2 && pp2 != pp1 && pp2 != pp0);
 
-<<<<<<< HEAD:kern/pmap.c
-=======
 	// mark all pages allocated
 	pages_alloc(&saved_pages, get_order(page_array_size));
-	memcpy(page2kva(saved_pages), pages, page_array_size);
+	memmove(page2kva(saved_pages), pages, page_array_size);
 	for (i = 0; i < npage; i++)
 		PAGE_MARK_ALLOC(&pages[i]);
 
->>>>>>> master:kern/pmap.c
 	// temporarily steal the rest of the free pages
-<<<<<<< HEAD:kern/pmap.c
-	fl = page_free_list;
-	LIST_INIT(&page_free_list);
-=======
-	memcpy(fl, page_free_list, sizeof(fl));
+	memmove(fl, page_free_list, sizeof(fl));
 	for (i = 0; i <= MAX_ORDER; i++)
 		LIST_INIT(&page_free_list[i]);
->>>>>>> master:kern/pmap.c
 
 	// should be no free memory
 	assert(page_alloc(&pp) == -E_NO_MEM);
@@ -1581,10 +1287,7 @@ page_check(void)
 
 	// insert pp1 at PGSIZE (replacing pp2)
 	assert(page_insert(boot_pgdir, pp1, (void*) PGSIZE, 0) == 0);
-<<<<<<< HEAD:kern/pmap.c
 	assert(!(*pgdir_walk(boot_pgdir, (void*) PGSIZE, 0) & PTE_U));
-=======
->>>>>>> master:kern/pmap.c
 
 	// should have pp1 at both 0 and PGSIZE, pp2 nowhere, ...
 	assert(check_va2pa(boot_pgdir, 0) == page2pa(pp1));
@@ -1658,27 +1361,15 @@ page_check(void)
 	pp0->pp_ref = 0;
 
 	// give free list back
-<<<<<<< HEAD:kern/pmap.c
-	page_free_list = fl;
-=======
-	memcpy(page_free_list, fl, sizeof(fl));
-	memcpy(pages, page2kva(saved_pages), page_array_size);
+	memmove(page_free_list, fl, sizeof(fl));
+	memmove(pages, page2kva(saved_pages), page_array_size);
 
 	pages_free(saved_pages, get_order(page_array_size));
->>>>>>> master:kern/pmap.c
 
 	// free the pages we took
 	page_free(pp0);
 	page_free(pp1);
 	page_free(pp2);
-<<<<<<< HEAD:kern/pmap.c
-	
-=======
 
->>>>>>> master:kern/pmap.c
 	cprintf("page_check() succeeded!\n");
 }
-<<<<<<< HEAD:kern/pmap.c
-
-=======
->>>>>>> master:kern/pmap.c

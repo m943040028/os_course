@@ -18,18 +18,12 @@ static struct Taskstate ts;
  * shifted function addresses can't be represented in relocation records.)
  */
 struct Gatedesc idt[256] = { { 0 } };
-<<<<<<< HEAD:kern/trap.c
-=======
 //extern struct Gatedesc idt[256];
->>>>>>> master:kern/trap.c
+
 struct Pseudodesc idt_pd = {
 	sizeof(idt) - 1, (uint32_t) idt
 };
 
-<<<<<<< HEAD:kern/trap.c
-
-=======
->>>>>>> master:kern/trap.c
 static const char *trapname(int trapno)
 {
 	static const char * const excnames[] = {
@@ -41,11 +35,7 @@ static const char *trapname(int trapno)
 		"BOUND Range Exceeded",
 		"Invalid Opcode",
 		"Device Not Available",
-<<<<<<< HEAD:kern/trap.c
 		"Double Fault",
-=======
-		"Double Falt",
->>>>>>> master:kern/trap.c
 		"Coprocessor Segment Overrun",
 		"Invalid TSS",
 		"Segment Not Present",
@@ -74,9 +64,6 @@ idt_init(void)
 {
 	extern struct Segdesc gdt[];
 	
-<<<<<<< HEAD:kern/trap.c
-	// LAB 3: Your code here.
-=======
 	// call patcher functions that generate idt entries
 	typedef void (*funcptr)(void);
 	extern const char __IDT_PATCHER_BEGIN__[], __IDT_PATCHER_END__[];
@@ -84,7 +71,6 @@ idt_init(void)
 	for (idt_patcher = (funcptr *)__IDT_PATCHER_BEGIN__; 
 		idt_patcher < (funcptr *)__IDT_PATCHER_END__; idt_patcher++)
 		(*idt_patcher)();
->>>>>>> master:kern/trap.c
 
 	// Setup a TSS so that we get the right stack
 	// when we trap to the kernel.
@@ -132,8 +118,6 @@ print_regs(struct PushRegs *regs)
 	cprintf("  eax  0x%08x\n", regs->reg_eax);
 }
 
-<<<<<<< HEAD:kern/trap.c
-=======
 void
 enable_sep(void)
 {
@@ -142,14 +126,10 @@ enable_sep(void)
 	wrmsr(0x176, (uint32_t) syscall, 0);	// SYSENTER_EIP_MSR
 }
 
->>>>>>> master:kern/trap.c
 static void
 trap_dispatch(struct Trapframe *tf)
 {
 	// Handle processor exceptions.
-<<<<<<< HEAD:kern/trap.c
-	// LAB 3: Your code here.
-=======
 	switch (tf->tf_trapno) {
 	case T_PGFLT:
 		page_fault_handler(tf);
@@ -174,15 +154,10 @@ trap_dispatch(struct Trapframe *tf)
 				tf->tf_regs.reg_edi, tf->tf_regs.reg_esi);
 		return;
 	}
->>>>>>> master:kern/trap.c
 	
 	// Handle clock interrupts.
-<<<<<<< HEAD:kern/trap.c
-	// LAB 4: Your code here.
-=======
 	if (tf->tf_trapno == IRQ_OFFSET + IRQ_TIMER)
 		sched_yield();
->>>>>>> master:kern/trap.c
 
 	// Handle spurious interupts
 	// The hardware sometimes raises these because of noise on the
@@ -230,39 +205,27 @@ trap(struct Trapframe *tf)
 		sched_yield();
 }
 
-<<<<<<< HEAD:kern/trap.c
-=======
 void
 break_point_handler(struct Trapframe *tf)
 {
 	monitor(tf);
 }
->>>>>>> master:kern/trap.c
 
 void
 page_fault_handler(struct Trapframe *tf)
 {
 	uint32_t fault_va;
-<<<<<<< HEAD:kern/trap.c
-=======
 	struct UTrapframe *utf;
->>>>>>> master:kern/trap.c
 
 	// Read processor's CR2 register to find the faulting address
 	fault_va = rcr2();
 
-	// Handle kernel-mode page faults.
-	
-	// LAB 3: Your code here.
-<<<<<<< HEAD:kern/trap.c
-=======
+	// Handle kernel-mode page faults.	
 	// If we are in kernel mode, and dereferencing a kernel data struct,
 	// then fault, we met a problem.
 	if ( (tf->tf_cs & 3) == 0 && fault_va >= KERNBASE)
 		panic("Page fault in Kernel mode, ip: %08x, "
 			"fault va: %08x\n", tf->tf_eip, fault_va);
-
->>>>>>> master:kern/trap.c
 
 	// We've already handled kernel-mode exceptions, so if we get here,
 	// the page fault happened in user mode.
@@ -291,14 +254,7 @@ page_fault_handler(struct Trapframe *tf)
 	//   user_mem_assert() and env_run() are useful here.
 	//   To change what the user environment runs, modify 'curenv->env_tf'
 	//   (the 'tf' variable points at 'curenv->env_tf').
-<<<<<<< HEAD:kern/trap.c
-	
-=======
 
->>>>>>> master:kern/trap.c
-	// LAB 4: Your code here.
-<<<<<<< HEAD:kern/trap.c
-=======
 	if (!curenv->env_pgfault_upcall)
 		goto no_handler;
 
@@ -323,12 +279,8 @@ page_fault_handler(struct Trapframe *tf)
 	curenv->env_tf.tf_eip = (uintptr_t)curenv->env_pgfault_upcall;
 	curenv->env_tf.tf_esp = (uintptr_t)utf;
 	env_run(curenv);
->>>>>>> master:kern/trap.c
 
-<<<<<<< HEAD:kern/trap.c
-=======
 no_handler:
->>>>>>> master:kern/trap.c
 	// Destroy the environment that caused the fault.
 	cprintf("[%08x] user fault va %08x ip %08x\n",
 		curenv->env_id, fault_va, tf->tf_eip);

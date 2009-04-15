@@ -4,11 +4,8 @@
 #include <kern/pmap.h>
 #include <kern/monitor.h>
 
-<<<<<<< HEAD:kern/sched.c
-=======
 #define KDEBUG
 #include <kern/kdebug.h>
->>>>>>> master:kern/sched.c
 
 // Choose a user environment to run and run it.
 void
@@ -23,14 +20,8 @@ sched_yield(void)
 	// But never choose envs[0], the idle environment,
 	// unless NOTHING else is runnable.
 
-<<<<<<< HEAD:kern/sched.c
-	// LAB 4: Your code here.
-=======
 	int target, count = NENV;
->>>>>>> master:kern/sched.c
 
-<<<<<<< HEAD:kern/sched.c
-=======
 	// If no current running environment, searching started from
 	// envs[1]
 	if (curenv)
@@ -50,7 +41,7 @@ sched_yield(void)
 
 	DBG(C_SCHED, KDEBUG_FLOW,
 		"Nothing else is runnable, picking idle environment\n");
->>>>>>> master:kern/sched.c
+
 	// Run the special idle environment when nothing else is runnable.
 	if (envs[0].env_status == ENV_RUNNABLE)
 		env_run(&envs[0]);

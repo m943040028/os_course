@@ -5,36 +5,23 @@
 #include <inc/string.h>
 #include <inc/memlayout.h>
 #include <inc/assert.h>
-<<<<<<< HEAD:kern/monitor.c
-=======
 #include <inc/error.h>
->>>>>>> master:kern/monitor.c
 #include <inc/x86.h>
 
 #include <kern/console.h>
 #include <kern/monitor.h>
-<<<<<<< HEAD:kern/monitor.c
-#include <kern/kdebug.h>
-=======
->>>>>>> master:kern/monitor.c
 #include <kern/trap.h>
-<<<<<<< HEAD:kern/monitor.c
-=======
 #include <kern/kdebug.h>
 #include <kern/pmap.h>
 #include <kern/env.h>
->>>>>>> master:kern/monitor.c
 
 #define CMDBUF_SIZE	80	// enough for one VGA text line
 
-<<<<<<< HEAD:kern/monitor.c
-=======
 // TODO:
 //   (1) Step an instruction
 //   (2) Continue execution
 //   (3) Online kernel debugger, in assemble level
 //   (4) Shortcut for each command
->>>>>>> master:kern/monitor.c
 
 struct Command {
 	const char *name;
@@ -46,8 +33,6 @@ struct Command {
 static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
-<<<<<<< HEAD:kern/monitor.c
-=======
 	{ "backtrace", "Traceback the call stack", mon_backtrace },
 	{ "showmapping", "Dump virtual memory mapping", mon_showmapping },
 	{ "switch", "Switch address space", mon_switch },
@@ -56,7 +41,6 @@ static struct Command commands[] = {
 	{ "dumpva", "Dump virtual memory contents", mon_dumpva },
 	{ "dumppa", "Dump physical memory contents", mon_dumppa },
 	{ "buddyinfo", "Free memory information", mon_buddyinfo },
->>>>>>> master:kern/monitor.c
 };
 #define NCOMMANDS (sizeof(commands)/sizeof(commands[0]))
 
@@ -89,8 +73,6 @@ mon_kerninfo(int argc, char **argv, struct Trapframe *tf)
 	return 0;
 }
 
-<<<<<<< HEAD:kern/monitor.c
-=======
 // Call stack overview on i386 architecture:
 //
 //	|		| <-- Last EBP
@@ -111,13 +93,9 @@ mon_kerninfo(int argc, char **argv, struct Trapframe *tf)
 //	| local var 1 	| <-- current ESP
 //
 //
->>>>>>> master:kern/monitor.c
 int
 mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 {
-<<<<<<< HEAD:kern/monitor.c
-	// Your code here.
-=======
 	uint32_t *ebp = (uint32_t *)read_ebp();
 	uint32_t current_pc = read_eip();
 
@@ -196,20 +174,14 @@ int mon_allocpage(int argc, char **argv, struct Trapframe *tf)
 	cprintf("kvaddr: %x, ppn: %x, order: %d\n", 
 		page2kva(pp), page2ppn(pp), order);
 
->>>>>>> master:kern/monitor.c
 	return 0;
 }
 
-<<<<<<< HEAD:kern/monitor.c
-=======
 int mon_freepage(int argc, char **argv, struct Trapframe *tf)
 {
 	struct Page *pp;
 	int vaddr, order;
->>>>>>> master:kern/monitor.c
 
-<<<<<<< HEAD:kern/monitor.c
-=======
 	if (argc != 3) {
 		cprintf("usage: %s <kaddr> <order>\n", argv[0]);
 		return 0;
@@ -292,7 +264,6 @@ int mon_switch(int argc, char **argv, struct Trapframe *tf)
 	cprintf("Switched to environment: %x\n", env->env_id);
 	return 0;
 }
->>>>>>> master:kern/monitor.c
 
 /***** Kernel monitor command interpreter *****/
 

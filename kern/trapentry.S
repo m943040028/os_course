@@ -6,11 +6,7 @@
 
 #include <kern/picirq.h>
 
-<<<<<<< HEAD:kern/trapentry.S
-=======
 .extern idt
->>>>>>> master:kern/trapentry.S
-
 ###################################################################
 # exceptions/interrupts
 ###################################################################
@@ -19,62 +15,35 @@
  * a trap.  It pushes a trap number onto the stack, then jumps to _alltraps.
  * Use TRAPHANDLER for traps where the CPU automatically pushes an error code.
  */ 
-<<<<<<< HEAD:kern/trapentry.S
-#define TRAPHANDLER(name, num)						\
-=======
 #define TRAPHANDLER(name, num, dpl)					\
->>>>>>> master:kern/trapentry.S
 	.globl name;		/* define global symbol for 'name' */	\
 	.type name, @function;	/* symbol type is function */		\
 	.align 2;		/* align function definition */		\
-<<<<<<< HEAD:kern/trapentry.S
-	name:			/* function starts here */		\
-=======
 name:				/* function starts here */		\
 	/* mask interrupt, kernel should run with interrupt		\
 	 * disabled. CPU will not disable interrupt if the trap		\
 	 * is through trap gate						\
 	 */								\
 	cli;								\
->>>>>>> master:kern/trapentry.S
 	pushl $(num);							\
-<<<<<<< HEAD:kern/trapentry.S
-	jmp _alltraps
-=======
 	jmp _alltraps;							\
 	TABLE_GENERATOR(name, num, dpl, 0xf);				\
->>>>>>> master:kern/trapentry.S
 
 /* Use TRAPHANDLER_NOEC for traps where the CPU doesn't push an error code.
  * It pushes a 0 in place of the error code, so the trap frame has the same
  * format in either case.
  */
-<<<<<<< HEAD:kern/trapentry.S
-#define TRAPHANDLER_NOEC(name, num)					\
-=======
 #define TRAPHANDLER_NOEC(name, num, dpl)				\
->>>>>>> master:kern/trapentry.S
 	.globl name;							\
 	.type name, @function;						\
 	.align 2;							\
-<<<<<<< HEAD:kern/trapentry.S
-	name:								\
-=======
 name:									\
 	cli;								\
->>>>>>> master:kern/trapentry.S
 	pushl $0;							\
 	pushl $(num);							\
-<<<<<<< HEAD:kern/trapentry.S
-	jmp _alltraps
-=======
 	jmp _alltraps;							\
 	TABLE_GENERATOR(name, num, dpl, 0xf);				\
->>>>>>> master:kern/trapentry.S
 
-<<<<<<< HEAD:kern/trapentry.S
-.text
-=======
 #define INTERRUPT_HANDLER(name, num)					\
 	.globl name;							\
 	.type name, @function;						\
@@ -110,13 +79,10 @@ name##_patcher:	/* create idt entry for this handler automatically */	\
 .section .idt_patcher, "ax";						\
 	.long	name##_patcher;						\
 .previous
->>>>>>> master:kern/trapentry.S
 
 /*
  * Lab 3: Your code here for generating entry points for the different traps.
  */
-<<<<<<< HEAD:kern/trapentry.S
-=======
 .text
 TRAPHANDLER_NOEC(trap_divide_error, 	T_DIVIDE, 	0)
 TRAPHANDLER(trap_debug_exception,	T_DEBUG,  	0)
@@ -138,24 +104,16 @@ TRAPHANDLER(trap_machine_check, 	T_MCHK, 	0)
 TRAPHANDLER(trap_simd_floating_point, 	T_SIMDERR, 	0)
 
 TRAPHANDLER_NOEC(trap_sys_call,		T_SYSCALL,	3)
->>>>>>> master:kern/trapentry.S
 
-<<<<<<< HEAD:kern/trapentry.S
-	
-=======
 INTERRUPT_HANDLER(irq_timer,		IRQ_OFFSET+IRQ_TIMER)
 INTERRUPT_HANDLER(irq_kbd,		IRQ_OFFSET+IRQ_KBD)
 INTERRUPT_HANDLER(irq_spurious,		IRQ_OFFSET+IRQ_SPURIOUS)
 INTERRUPT_HANDLER(irq_ide,		IRQ_OFFSET+IRQ_IDE)
 INTERRUPT_HANDLER(irq_error,		IRQ_OFFSET+IRQ_ERROR)
->>>>>>> master:kern/trapentry.S
 
 /*
  * Lab 3: Your code here for _alltraps
  */
-<<<<<<< HEAD:kern/trapentry.S
-	
-=======
 _alltraps:
 	/* to finish a trapframe */
 	pushl 	%ds
@@ -172,4 +130,3 @@ _alltraps:
 	call	trap
 	/* should never return */
 	jmp	.
->>>>>>> master:kern/trapentry.S

@@ -17,29 +17,18 @@ pgfault(struct UTrapframe *utf)
 	void *addr = (void *) utf->utf_fault_va;
 	uint32_t err = utf->utf_err;
 	int r;
-<<<<<<< HEAD:lib/fork.c
-=======
 	pte_t pte;
->>>>>>> master:lib/fork.c
 
 	// Check that the faulting access was (1) a write, and (2) to a
 	// copy-on-write page.  If not, panic.
 	// Hint:
 	//   Use the read-only page table mappings at vpt
 	//   (see <inc/memlayout.h>).
-<<<<<<< HEAD:lib/fork.c
-=======
 	assert(vpd[VPD(addr)] != 0x0);
-
 	pte = vpt[VPN(addr)];
->>>>>>> master:lib/fork.c
 
-<<<<<<< HEAD:lib/fork.c
-	// LAB 4: Your code here.
-=======
 	if ( !(pte & PTE_COW))
 		panic("write access to non copy-on-write page\n");
->>>>>>> master:lib/fork.c
 
 	// Allocate a new page, map it at a temporary location (PFTEMP),
 	// copy the data from the old page to the new page, then move the new
@@ -47,12 +36,7 @@ pgfault(struct UTrapframe *utf)
 	// Hint:
 	//   You should make three system calls.
 	//   No need to explicitly delete the old page's mapping.
-	
-<<<<<<< HEAD:lib/fork.c
-	// LAB 4: Your code here.
-	
-	panic("pgfault not implemented");
-=======
+
 	addr = ROUNDDOWN(addr, PGSIZE);
 	if ( (r = sys_page_alloc(0, PFTEMP,
 		PTE_U|PTE_P|PTE_W)) < 0)
@@ -69,7 +53,6 @@ pgfault(struct UTrapframe *utf)
 	// unmap the temporary location
 	if ((r = sys_page_unmap(0, PFTEMP)) < 0)
 		panic("sys_page_unmap: %e", r);
->>>>>>> master:lib/fork.c
 }
 
 //
@@ -89,10 +72,6 @@ duppage(envid_t envid, unsigned pn)
 	void *addr;
 	pte_t pte;
 
-<<<<<<< HEAD:lib/fork.c
-	// LAB 4: Your code here.
-	panic("duppage not implemented");
-=======
 	addr = (void *) (pn * PGSIZE);
 	pte = vpt[pn];
 
@@ -114,7 +93,6 @@ duppage(envid_t envid, unsigned pn)
 		(void *)addr, pte)) < 0)
 		panic("parent: sys_page_map: %e", r);
 
->>>>>>> master:lib/fork.c
 	return 0;
 }
 
@@ -137,10 +115,6 @@ duppage(envid_t envid, unsigned pn)
 envid_t
 fork(void)
 {
-<<<<<<< HEAD:lib/fork.c
-	// LAB 4: Your code here.
-	panic("fork not implemented");
-=======
 	envid_t child;
 	extern unsigned char end[];
 	uint8_t *addr;
@@ -198,7 +172,6 @@ fork(void)
 	sys_yield();
 
 	return child;
->>>>>>> master:lib/fork.c
 }
 
 // Challenge!

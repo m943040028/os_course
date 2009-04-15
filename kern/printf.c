@@ -4,11 +4,7 @@
 #include <inc/types.h>
 #include <inc/stdio.h>
 #include <inc/stdarg.h>
-<<<<<<< HEAD:kern/printf.c
-
-=======
 #include <inc/string.h>
->>>>>>> master:kern/printf.c
 
 static void
 putch(int ch, int *cnt)

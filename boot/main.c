@@ -3,11 +3,7 @@
 
 /**********************************************************************
  * This a dirt simple boot loader, whose sole job is to boot
-<<<<<<< HEAD:boot/main.c
  * an ELF kernel image from the first IDE hard disk.
-=======
- * an elf kernel image from the first IDE hard disk.
->>>>>>> master:boot/main.c
  *
  * DISK LAYOUT
  *  * This program(boot.S and main.c) is the bootloader.  It should
@@ -28,17 +24,9 @@
  *    hard-drive, this code takes over...
  *
  *  * control starts in bootloader.S -- which sets up protected mode,
-<<<<<<< HEAD:boot/main.c
  *    and a stack so C code then run, then calls bootmain()
-=======
- *    and a stack so C code then run, then calls cmain()
->>>>>>> master:boot/main.c
  *
-<<<<<<< HEAD:boot/main.c
  *  * bootmain() in this file takes over, reads in the kernel and jumps to it.
-=======
- *  * cmain() in this file takes over, reads in the kernel and jumps to it.
->>>>>>> master:boot/main.c
  **********************************************************************/
 
 #define SECTSIZE	512
@@ -46,23 +34,11 @@
 
 void readsect(void*, uint32_t);
 void readseg(uint32_t, uint32_t, uint32_t);
-<<<<<<< HEAD:boot/main.c
-=======
-uint32_t read_file(uint32_t, uint32_t, uint32_t, uint32_t *);
->>>>>>> master:boot/main.c
 
 void
-<<<<<<< HEAD:boot/main.c
 bootmain(void)
-=======
-cmain(void)
->>>>>>> master:boot/main.c
 {
 	struct Proghdr *ph, *eph;
-<<<<<<< HEAD:boot/main.c
-=======
-	uint32_t length;
->>>>>>> master:boot/main.c
 
 	// read 1st page off disk
 	readseg((uint32_t) ELFHDR, SECTSIZE*8, 0);

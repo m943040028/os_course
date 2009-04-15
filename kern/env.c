@@ -13,12 +13,9 @@
 #include <kern/monitor.h>
 #include <kern/sched.h>
 
-<<<<<<< HEAD:kern/env.c
-=======
 #define KDEBUG
 #include <kern/kdebug.h>
 
->>>>>>> master:kern/env.c
 struct Env *envs = NULL;		// All environments
 struct Env *curenv = NULL;	        // The current env
 static struct Env_list env_free_list;	// Free list
@@ -30,13 +27,8 @@ static struct Env_list env_free_list;	// Free list
 //
 // RETURNS
 //   0 on success, -E_BAD_ENV on error.
-<<<<<<< HEAD:kern/env.c
-//   On success, sets *env_store to the environment.
-//   On error, sets *env_store to NULL.
-=======
 //   On success, sets *penv to the environment.
 //   On error, sets *penv to NULL.
->>>>>>> master:kern/env.c
 //
 int
 envid2env(envid_t envid, struct Env **env_store, bool checkperm)
@@ -75,11 +67,7 @@ envid2env(envid_t envid, struct Env **env_store, bool checkperm)
 }
 
 //
-<<<<<<< HEAD:kern/env.c
 // Mark all environments in 'envs' as free, set their env_ids to 0,
-=======
-// Mark all environments in 'envs' as free, set their env_id to 0,
->>>>>>> master:kern/env.c
 // and insert them into the env_free_list.
 // Insert in reverse order, so that the first call to env_alloc()
 // returns envs[0].
@@ -87,9 +75,6 @@ envid2env(envid_t envid, struct Env **env_store, bool checkperm)
 void
 env_init(void)
 {
-<<<<<<< HEAD:kern/env.c
-	// LAB 3: Your code here.
-=======
 	struct Env *e;
 
 	for (e = &envs[NENV-1]; e >= envs; e--) {
@@ -107,8 +92,7 @@ clone_vm(uintptr_t env_pgdir)
 	//
 	pde_t *pd = &boot_pgdir[PDX(UTOP)];
 	pde_t *end = &boot_pgdir[PDX(MAXADDR)];
-	memcpy((pde_t *)env_pgdir + PDX(UTOP), pd, (end - pd) * 4);
->>>>>>> master:kern/env.c
+	memmove((pde_t *)env_pgdir + PDX(UTOP), pd, (end - pd) * 4);
 }
 
 //
@@ -131,11 +115,8 @@ env_setup_vm(struct Env *e)
 	if ((r = page_alloc(&p)) < 0)
 		return r;
 
-<<<<<<< HEAD:kern/env.c
-=======
 	memset(page2kva(p), 0, PGSIZE);
 
->>>>>>> master:kern/env.c
 	// Now, set e->env_pgdir and e->env_cr3,
 	// and initialize the page directory.
 	//
@@ -148,22 +129,13 @@ env_setup_vm(struct Env *e)
 	//    - The initial VA below UTOP is empty.
 	//    - You do not need to make any more calls to page_alloc.
 	//    - Note: pp_ref is not maintained for most physical pages
-<<<<<<< HEAD:kern/env.c
-	//	mapped above UTOP -- but you do need to increment
-	//	env_pgdir's pp_ref!
-=======
 	//	mapped above UTOP (since they should not be unampped) 
 	//      -- but you do need to increment env_pgdir's pp_ref!
->>>>>>> master:kern/env.c
 
-<<<<<<< HEAD:kern/env.c
-	// LAB 3: Your code here.
-=======
 	p->pp_ref++;
 	e->env_pgdir = (pde_t *)page2kva(p);
 	e->env_cr3 = PADDR(e->env_pgdir);
 	clone_vm((uintptr_t)e->env_pgdir);
->>>>>>> master:kern/env.c
 
 	// VPT and UVPT map the env's own page table, with
 	// different permissions.
@@ -225,11 +197,7 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 	// You will set e->env_tf.tf_eip later.
 
 	// Enable interrupts while in user mode.
-<<<<<<< HEAD:kern/env.c
-	// LAB 4: Your code here.
-=======
 	e->env_tf.tf_eflags |= FL_IF;
->>>>>>> master:kern/env.c
 
 	// Clear the page fault handler until user installs one.
 	e->env_pgfault_upcall = 0;
@@ -237,21 +205,15 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 	// Also clear the IPC receiving flag.
 	e->env_ipc_recving = 0;
 
-<<<<<<< HEAD:kern/env.c
 	// If this is the file server (e == &envs[1]) give it I/O privileges.
 	// LAB 5: Your code here.
 
-=======
->>>>>>> master:kern/env.c
 	// commit the allocation
 	LIST_REMOVE(e, env_link);
 	*newenv_store = e;
 
-<<<<<<< HEAD:kern/env.c
-	// cprintf("[%08x] new env %08x\n", curenv ? curenv->env_id : 0, e->env_id);
-=======
 	cprintf("[%08x] new env %08x\n", curenv ? curenv->env_id : 0, e->env_id);
->>>>>>> master:kern/env.c
+
 	return 0;
 }
 
@@ -263,24 +225,11 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 // Panic if any allocation attempt fails.
 //
 static void
-<<<<<<< HEAD:kern/env.c
-segment_alloc(struct Env *e, void *va, size_t len)
-=======
 segment_alloc(struct Env *e, void *va, size_t len, int rw)
->>>>>>> master:kern/env.c
 {
-<<<<<<< HEAD:kern/env.c
-	// LAB 3: Your code here.
-	// (But only if you need it for load_icode.)
-	//
-=======
->>>>>>> master:kern/env.c
 	// Hint: It is easier to use segment_alloc if the caller can pass
 	//   'va' and 'len' values that are not page-aligned.
 	//   You should round va down, and round len up.
-<<<<<<< HEAD:kern/env.c
-=======
-
 	// TODO: very inefficient for large size
 	int perm = PTE_W|PTE_U;
 
@@ -301,7 +250,6 @@ segment_alloc(struct Env *e, void *va, size_t len, int rw)
 seg_alloc_no_mem:
 	// TODO: find a way to roll back
 	panic("not enough memory for new environment\n");
->>>>>>> master:kern/env.c
 }
 
 //
@@ -339,10 +287,7 @@ load_icode(struct Env *e, uint8_t *binary, size_t size)
 	//  'binary + ph->p_offset', should be copied to virtual address
 	//  ph->p_va.  Any remaining memory bytes should be cleared to zero.
 	//  (The ELF header should have ph->p_filesz <= ph->p_memsz.)
-<<<<<<< HEAD:kern/env.c
-=======
 	//  Use functions from the previous lab to allocate and map pages.
->>>>>>> master:kern/env.c
 	//
 	//  All page protection bits should be user read/write for now.
 	//  ELF segments are not necessarily page-aligned, but you can
@@ -361,10 +306,6 @@ load_icode(struct Env *e, uint8_t *binary, size_t size)
 	//  to make sure that the environment starts executing there.
 	//  What?  (See env_run() and env_pop_tf() below.)
 
-<<<<<<< HEAD:kern/env.c
-	// LAB 3: Your code here.
-
-=======
 	struct Proghdr *ph, *eph;
 	uint8_t *strtab;
 	struct Elf *ehdr = (struct Elf *) binary;
@@ -401,7 +342,7 @@ load_icode(struct Env *e, uint8_t *binary, size_t size)
 			segment_alloc(e, (void *)ph->p_va, ph->p_memsz, rw);
 
 			// copy program header context
-			memcpy((void *)ph->p_va, binary + ph->p_offset, 
+			memmove((void *)ph->p_va, binary + ph->p_offset, 
 				ph->p_filesz);
 
 			// clear remaining if ph->p_memsz > ph->p_filesz
@@ -412,20 +353,12 @@ load_icode(struct Env *e, uint8_t *binary, size_t size)
 		}
 	}
 	
->>>>>>> master:kern/env.c
 	// Now map one page for the program's initial stack
 	// at virtual address USTACKTOP - PGSIZE.
-<<<<<<< HEAD:kern/env.c
-=======
 	segment_alloc(e, (void *)USTACKTOP-PGSIZE, PGSIZE, 1);
->>>>>>> master:kern/env.c
 
-<<<<<<< HEAD:kern/env.c
-	// LAB 3: Your code here.
-=======
 	e->env_tf.tf_eip = ehdr->e_entry;
 	e->env_tf.tf_esp = USTACKTOP;
->>>>>>> master:kern/env.c
 }
 
 //
@@ -441,9 +374,6 @@ load_icode(struct Env *e, uint8_t *binary, size_t size)
 void
 env_create(uint8_t *binary, size_t size)
 {
-<<<<<<< HEAD:kern/env.c
-	// LAB 3: Your code here.
-=======
 	struct Env *e;
 
 	// envs[0] should be allocated
@@ -452,7 +382,6 @@ env_create(uint8_t *binary, size_t size)
 			" user-mode environment\n");
 
 	load_icode(e, binary, size);
->>>>>>> master:kern/env.c
 }
 
 //
@@ -464,22 +393,15 @@ env_free(struct Env *e)
 	pte_t *pt;
 	uint32_t pdeno, pteno;
 	physaddr_t pa;
-<<<<<<< HEAD:kern/env.c
 	
 	// If freeing the current environment, switch to boot_pgdir
 	// before freeing the page directory, just in case the page
 	// gets reused.
 	if (e == curenv)
 		lcr3(boot_cr3);
-=======
->>>>>>> master:kern/env.c
 
 	// Note the environment's demise.
-<<<<<<< HEAD:kern/env.c
-	// cprintf("[%08x] free env %08x\n", curenv ? curenv->env_id : 0, e->env_id);
-=======
 	cprintf("[%08x] free env %08x\n", curenv ? curenv->env_id : 0, e->env_id);
->>>>>>> master:kern/env.c
 
 	// Flush all mapped pages in the user portion of the address space
 	static_assert(UTOP % PTSIZE == 0);
@@ -570,19 +492,9 @@ env_run(struct Env *e)
 	//	e->env_tf.  Go back through the code you wrote above
 	//	and make sure you have set the relevant parts of
 	//	e->env_tf to sensible values.
-<<<<<<< HEAD:kern/env.c
-	
-	// LAB 3: Your code here.
-=======
->>>>>>> master:kern/env.c
-
-<<<<<<< HEAD:kern/env.c
-        panic("env_run not yet implemented");
-=======
 	curenv = e;
 	e->env_runs++;
 	lcr3(e->env_cr3);
 	env_pop_tf(&e->env_tf);
->>>>>>> master:kern/env.c
 }
 

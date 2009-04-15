@@ -24,8 +24,6 @@ int cons_getc(void);
 void kbd_intr(void); // irq 1
 void serial_intr(void); // irq 4
 
-<<<<<<< HEAD:kern/console.h
-=======
 #define	FORE_BLACK	30
 #define	FORE_RED	31
 #define	FORE_GREEN	32
@@ -65,5 +63,4 @@ typedef enum pc_colors {
 	pc_brt_white	= 15
 } pc_colors_t;
 
->>>>>>> master:kern/console.h
 #endif /* _CONSOLE_H_ */

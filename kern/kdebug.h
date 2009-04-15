@@ -17,8 +17,6 @@ struct Eipdebuginfo {
 
 int debuginfo_eip(uintptr_t eip, struct Eipdebuginfo *info);
 
-<<<<<<< HEAD:kern/kdebug.h
-=======
 // Custom debug staff
 #ifdef KDEBUG
 void inline k_debug(uint8_t catelog, uint8_t level, char* fmt, ...);
@@ -42,5 +40,4 @@ void inline k_debug_msg_off(void);
 #define KDEBUG_FLOW		0x2
 #define KDEBUG_VERBOSE		0x8
 
->>>>>>> master:kern/kdebug.h
 #endif
