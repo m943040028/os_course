@@ -270,7 +270,10 @@ ata0: enabled=1, ioaddr1=0x1f0, ioaddr2=0x3f0, irq=14
 #   ata3-slave:  type=cdrom, path=iso.sample, status=inserted
 #=======================================================================
 ata0-master: type=disk, mode=flat, path="./obj/kern/bochs.img", cylinders=100, heads=10, spt=10
+<<<<<<< HEAD:.bochsrc
 ata0-slave: type=disk, mode=flat, path="./obj/fs/fs.img", cylinders=128, heads=8, spt=8
+=======
+>>>>>>> master:.bochsrc
 
 #=======================================================================
 # BOOT:
@@ -425,8 +428,12 @@ debugger_log: -
 #   com3: enabled=1, mode=raw, dev=com1
 #   com3: enabled=1, mode=socket, dev=localhost:8888
 #=======================================================================
+<<<<<<< HEAD:.bochsrc
 #com1: enabled=1, mode=term, dev=/dev/ttyp9
 
+=======
+com1: enabled=1, mode=socket, dev=localhost:1234
+>>>>>>> master:.bochsrc
 
 #=======================================================================
 # PARPORT1, PARPORT2:

@@ -37,6 +37,16 @@ SECTIONS
 				   for this section */
 	}
 
+<<<<<<< HEAD:kern/kernel.ld
+=======
+	. = ALIGN(4);
+	.idt_patcher : {
+		PROVIDE(__IDT_PATCHER_BEGIN__ = .);
+		*(.idt_patcher);
+		PROVIDE(__IDT_PATCHER_END__ = .);
+	}
+
+>>>>>>> master:kern/kernel.ld
 	/* Adjust the address for the data segment to the next page */
 	. = ALIGN(0x1000);
 

@@ -17,14 +17,29 @@ pgfault(struct UTrapframe *utf)
 	void *addr = (void *) utf->utf_fault_va;
 	uint32_t err = utf->utf_err;
 	int r;
+<<<<<<< HEAD:lib/fork.c
+=======
+	pte_t pte;
+>>>>>>> master:lib/fork.c
 
 	// Check that the faulting access was (1) a write, and (2) to a
 	// copy-on-write page.  If not, panic.
 	// Hint:
 	//   Use the read-only page table mappings at vpt
 	//   (see <inc/memlayout.h>).
+<<<<<<< HEAD:lib/fork.c
+=======
+	assert(vpd[VPD(addr)] != 0x0);
 
+	pte = vpt[VPN(addr)];
+>>>>>>> master:lib/fork.c
+
+<<<<<<< HEAD:lib/fork.c
 	// LAB 4: Your code here.
+=======
+	if ( !(pte & PTE_COW))
+		panic("write access to non copy-on-write page\n");
+>>>>>>> master:lib/fork.c
 
 	// Allocate a new page, map it at a temporary location (PFTEMP),
 	// copy the data from the old page to the new page, then move the new
@@ -33,9 +48,28 @@ pgfault(struct UTrapframe *utf)
 	//   You should make three system calls.
 	//   No need to explicitly delete the old page's mapping.
 	
+<<<<<<< HEAD:lib/fork.c
 	// LAB 4: Your code here.
 	
 	panic("pgfault not implemented");
+=======
+	addr = ROUNDDOWN(addr, PGSIZE);
+	if ( (r = sys_page_alloc(0, PFTEMP,
+		PTE_U|PTE_P|PTE_W)) < 0)
+		panic("sys_page_alloc: %e\n", r);
+
+	// copy the data from the old page
+	memmove(PFTEMP, addr, PGSIZE);
+
+	// move the new page to old page's address
+	if ((r = sys_page_map(0, PFTEMP, 0,
+		addr, PTE_P|PTE_U|PTE_W)) < 0)
+		panic("sys_page_map: %e", r);
+
+	// unmap the temporary location
+	if ((r = sys_page_unmap(0, PFTEMP)) < 0)
+		panic("sys_page_unmap: %e", r);
+>>>>>>> master:lib/fork.c
 }
 
 //
@@ -55,8 +89,32 @@ duppage(envid_t envid, unsigned pn)
 	void *addr;
 	pte_t pte;
 
+<<<<<<< HEAD:lib/fork.c
 	// LAB 4: Your code here.
 	panic("duppage not implemented");
+=======
+	addr = (void *) (pn * PGSIZE);
+	pte = vpt[pn];
+
+	// Omit unnecessary fileds, 
+	// PTE_P(bit0), PTE_W(bit1), PTE_U(bit2) is what we cared about
+	pte &= PTE_USER;
+	assert((pte & (PTE_P|PTE_U)) == (PTE_P|PTE_U));
+
+	if (pte & PTE_COW || pte & PTE_W) {
+		pte = (pte & ~PTE_W) | PTE_COW;
+	}
+
+	if ( (r = sys_page_map(0, (void *)addr, envid, 
+		(void *)addr, pte)) < 0)
+		panic("child: sys_page_map: %e", r);
+
+	// also, fix our page table entry
+	if ( (r = sys_page_map(0, (void *)addr, 0, 
+		(void *)addr, pte)) < 0)
+		panic("parent: sys_page_map: %e", r);
+
+>>>>>>> master:lib/fork.c
 	return 0;
 }
 
@@ -79,8 +137,68 @@ duppage(envid_t envid, unsigned pn)
 envid_t
 fork(void)
 {
+<<<<<<< HEAD:lib/fork.c
 	// LAB 4: Your code here.
 	panic("fork not implemented");
+=======
+	envid_t child;
+	extern unsigned char end[];
+	uint8_t *addr;
+	int r;
+
+	extern void _pgfault_upcall(void);
+	extern void (*_pgfault_handler)(struct UTrapframe *utf);
+	//assert(_pgfault_handler == NULL);
+	_pgfault_handler = pgfault;
+
+	child = sys_exofork();
+	if (child < 0)
+		return (int)child;
+
+	// common code for parent and child,
+	// allocate a clean exception stack for both environments
+	if ( (r = sys_page_alloc(0, (void *)UXSTACKTOP-PGSIZE,
+		PTE_U|PTE_P|PTE_W)) < 0)
+		panic("uxstack: sys_page_alloc: %e\n", r);
+
+	if ( (r = sys_env_set_pgfault_upcall(0, _pgfault_upcall)) < 0)
+		panic("sys_env_set_pgfault_upcall: %e\n", r);
+
+	if (!child) {
+		// We are child, update env and exit
+		env = &envs[ENVX(sys_getenvid())];
+		return 0;
+	}
+
+	// We are parent, dup our address space to child's using COW
+	for (addr = (uint8_t *)UTEXT; addr < end; addr += PGSIZE)
+		duppage(child, PPN(addr));
+
+	// Share user stack by two environment is nonsense,
+	// a page fault will occur immediately when the child
+	// returns from sys_exofork.
+	// So, we create a new user stack for child
+	if ( (r = sys_page_alloc(child, (void *)USTACKTOP-PGSIZE,
+		PTE_U|PTE_P|PTE_W)) < 0)
+		panic("dupstack: sys_page_alloc: %e\n", r);
+
+	if ( (r = sys_page_map(child, (void *)USTACKTOP-PGSIZE, 0, 
+		UTEMP, PTE_P|PTE_U|PTE_W)) < 0)
+		panic("dupstack: sys_page_map: %e", r);
+
+	// dup our stack content to child's
+	memmove(UTEMP, (void *)USTACKTOP-PGSIZE, PGSIZE);
+	if ( (r = sys_page_unmap(0, UTEMP)) < 0)
+		panic("dupstack: sys_page_unmap: %e", r);
+
+	// Start the child environment running
+	if ( (r = sys_env_set_status(child, ENV_RUNNABLE)) < 0)
+		panic("sys_env_set_status: %e\n", r);
+
+	sys_yield();
+
+	return child;
+>>>>>>> master:lib/fork.c
 }
 
 // Challenge!

@@ -34,6 +34,12 @@ static __inline uint32_t read_ebp(void) __attribute__((always_inline));
 static __inline uint32_t read_esp(void) __attribute__((always_inline));
 static __inline void cpuid(uint32_t info, uint32_t *eaxp, uint32_t *ebxp, uint32_t *ecxp, uint32_t *edxp);
 static __inline uint64_t read_tsc(void) __attribute__((always_inline));
+<<<<<<< HEAD:inc/x86.h
+=======
+static __inline void rdmsr(uint32_t msr, uint32_t *val1, uint32_t *val2);
+static __inline void wrmsr(uint32_t msr, uint32_t val1, uint32_t val2);
+
+>>>>>>> master:inc/x86.h
 
 static __inline void
 breakpoint(void)
@@ -274,4 +280,29 @@ read_tsc(void)
         return tsc;
 }
 
+<<<<<<< HEAD:inc/x86.h
+=======
+static __inline void
+rdmsr(uint32_t msr, uint32_t *val1, uint32_t *val2)
+{
+	uint32_t eax, edx;
+
+	__asm __volatile("rdmsr"
+		: "=a" (eax), "=d" (edx)
+		: "c" (msr));
+	if (val1)
+		*val1 = eax;
+	if (val2)
+		*val2 = edx;
+}
+
+static __inline void
+wrmsr(uint32_t msr, uint32_t val1, uint32_t val2)
+{
+	__asm __volatile("wrmsr"
+		: /* no outputs */ \
+		: "c" (msr), "a" (val1), "d" (val2));
+}
+
+>>>>>>> master:inc/x86.h
 #endif /* !JOS_INC_X86_H */

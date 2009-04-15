@@ -26,6 +26,12 @@ ifndef LABSETUP
 LABSETUP := ./
 endif
 
+<<<<<<< HEAD:GNUmakefile
+=======
+ifndef BXSHARE
+BXSHARE := $(PWD)/bochs/bios
+endif
+>>>>>>> master:GNUmakefile
 
 TOP = .
 
@@ -54,12 +60,20 @@ GCCPREFIX := $(shell if i386-jos-elf-objdump -i 2>&1 | grep '^elf32-i386$$' >/de
 endif
 
 CC	:= $(GCCPREFIX)gcc -pipe
+<<<<<<< HEAD:GNUmakefile
+=======
+GCC_LIB := $(shell $(CC) -print-libgcc-file-name)
+>>>>>>> master:GNUmakefile
 AS	:= $(GCCPREFIX)as
 AR	:= $(GCCPREFIX)ar
 LD	:= $(GCCPREFIX)ld
 OBJCOPY	:= $(GCCPREFIX)objcopy
 OBJDUMP	:= $(GCCPREFIX)objdump
 NM	:= $(GCCPREFIX)nm
+<<<<<<< HEAD:GNUmakefile
+=======
+BOCHS	:= BXSHARE=$(BXSHARE) bochs
+>>>>>>> master:GNUmakefile
 
 # Native commands
 NCC	:= gcc $(CC_VER) -pipe
@@ -69,6 +83,7 @@ PERL	:= perl
 # Compiler flags
 # -fno-builtin is required to avoid refs to undefined functions in the kernel.
 # Only optimize to -O1 to discourage inlining, which complicates backtraces.
+<<<<<<< HEAD:GNUmakefile
 CFLAGS := $(CFLAGS) $(DEFS) $(LABDEFS) -O1 -fno-builtin -I$(TOP) -MD 
 CFLAGS += -Wall -Wno-format -Wno-unused -Werror -gstabs -m32
 
@@ -77,12 +92,18 @@ CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 &
 
 # Common linker flags
 LDFLAGS := -m elf_i386
+=======
+CFLAGS	:= $(CFLAGS) $(DEFS) $(LABDEFS) -O -fno-builtin -I$(TOP) -MD -Wall -Wno-format -Wno-unused -Werror -gstabs
+>>>>>>> master:GNUmakefile
 
 # Linker flags for JOS user programs
 ULDFLAGS := -T user/user.ld
 
+<<<<<<< HEAD:GNUmakefile
 GCC_LIB := $(shell $(CC) $(CFLAGS) -print-libgcc-file-name)
 
+=======
+>>>>>>> master:GNUmakefile
 # Lists that the */Makefrag makefile fragments will add to
 OBJDIRS :=
 
@@ -99,24 +120,46 @@ all:
 .PRECIOUS: %.o $(OBJDIR)/boot/%.o $(OBJDIR)/kern/%.o \
 	$(OBJDIR)/lib/%.o $(OBJDIR)/fs/%.o $(OBJDIR)/user/%.o
 
+<<<<<<< HEAD:GNUmakefile
+=======
+# used for native gcc-4.x
+ifeq ($(GCCPREFIX),)
+CFLAGS += -fno-stack-protector
+endif
+
+>>>>>>> master:GNUmakefile
 KERN_CFLAGS := $(CFLAGS) -DJOS_KERNEL -gstabs
 USER_CFLAGS := $(CFLAGS) -DJOS_USER -gstabs
 
 
 
+<<<<<<< HEAD:GNUmakefile
 
+=======
+>>>>>>> master:GNUmakefile
 # Include Makefrags for subdirectories
 include boot/Makefrag
 include kern/Makefrag
 include lib/Makefrag
 include user/Makefrag
+<<<<<<< HEAD:GNUmakefile
 include fs/Makefrag
+=======
+>>>>>>> master:GNUmakefile
 
 
+<<<<<<< HEAD:GNUmakefile
 IMAGES = $(OBJDIR)/kern/bochs.img $(OBJDIR)/fs/fs.img
+=======
+IMAGES = $(OBJDIR)/kern/bochs.img
+>>>>>>> master:GNUmakefile
 
 bochs: $(IMAGES)
+<<<<<<< HEAD:GNUmakefile
 	bochs 'display_library: nogui'
+=======
+	$(BOCHS) 'display_library: nogui'
+>>>>>>> master:GNUmakefile
 
 # For deleting the build
 clean:
@@ -131,25 +174,41 @@ distclean: realclean
 grade: $(LABSETUP)grade.sh
 	$(V)$(MAKE) clean >/dev/null 2>/dev/null
 	$(MAKE) all
+<<<<<<< HEAD:GNUmakefile
 	sh $(LABSETUP)grade.sh
+=======
+	BXSHARE=$(BXSHARE) sh $(LABSETUP)grade.sh
+>>>>>>> master:GNUmakefile
 
 handin: tarball
 	@echo Please visit http://pdos.csail.mit.edu/cgi-bin/828handin
 	@echo and upload lab$(LAB)-handin.tar.gz.  Thanks!
 
 tarball: realclean
+<<<<<<< HEAD:GNUmakefile
 	tar cf - `find . -type f | grep -v '^\.*$$' | grep -v '/CVS/' | grep -v '/\.svn/' | grep -v '/\.git/' | grep -v 'lab[0-9].*\.tar\.gz'` | gzip > lab$(LAB)-handin.tar.gz
+=======
+	tar cf - `find . -type f | grep -v '^\.*$$' | grep -v '/CVS/' | grep -v '/\.svn/' | grep -v 'lab[0-9].*\.tar\.gz'` | gzip > lab$(LAB)-handin.tar.gz
+>>>>>>> master:GNUmakefile
 
 # For test runs
 run-%:
 	$(V)rm -f $(OBJDIR)/kern/init.o $(IMAGES)
 	$(V)$(MAKE) "DEFS=-DTEST=_binary_obj_user_$*_start -DTESTSIZE=_binary_obj_user_$*_size" $(IMAGES)
+<<<<<<< HEAD:GNUmakefile
 	bochs -q 'display_library: nogui'
+=======
+	$(BOCHS) -q 'display_library: nogui'
+>>>>>>> master:GNUmakefile
 
 xrun-%:
 	$(V)rm -f $(OBJDIR)/kern/init.o $(IMAGES)
 	$(V)$(MAKE) "DEFS=-DTEST=_binary_obj_user_$*_start -DTESTSIZE=_binary_obj_user_$*_size" $(IMAGES)
+<<<<<<< HEAD:GNUmakefile
 	bochs -q
+=======
+	$(BOCHS) -q
+>>>>>>> master:GNUmakefile
 
 # This magic automatically generates makefile dependencies
 # for header files included from C source files we compile,
@@ -165,4 +224,8 @@ always:
 	@:
 
 .PHONY: all always \
+<<<<<<< HEAD:GNUmakefile
 	handin tarball clean realclean clean-labsetup distclean grade labsetup
+=======
+	handin tarball clean realclean clean-labsetup distclean grade labsetup bochs
+>>>>>>> master:GNUmakefile

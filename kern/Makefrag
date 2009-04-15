@@ -36,13 +36,39 @@ KERN_SRCFILES := $(wildcard $(KERN_SRCFILES))
 
 # Binary program images to embed within the kernel.
 KERN_BINFILES :=	user/idle \
+<<<<<<< HEAD:kern/Makefrag
+=======
+			user/yield \
+			user/dumbfork \
+			user/faultread \
+			user/faultwrite \
+			user/faultdie \
+			user/faultalloc \
+			user/faultallocbad \
+			user/faultnostack \
+			user/faultbadhandler \
+			user/faultevilhandler \
+>>>>>>> master:kern/Makefrag
 			user/forktree \
+<<<<<<< HEAD:kern/Makefrag
+=======
+			user/spin \
+			user/fairness \
+>>>>>>> master:kern/Makefrag
 			user/pingpong \
+<<<<<<< HEAD:kern/Makefrag
+=======
+			user/pingpongs \
+>>>>>>> master:kern/Makefrag
 			user/primes \
+<<<<<<< HEAD:kern/Makefrag
 			user/testfsipc \
 			user/writemotd \
 			user/icode \
 			fs/fs
+=======
+			user/hello
+>>>>>>> master:kern/Makefrag
 
 KERN_OBJFILES := $(patsubst %.c, $(OBJDIR)/%.o, $(KERN_SRCFILES))
 KERN_OBJFILES := $(patsubst %.S, $(OBJDIR)/%.o, $(KERN_OBJFILES))

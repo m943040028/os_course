@@ -25,7 +25,11 @@ $(OBJDIR)/boot/main.o: boot/main.c
 
 $(OBJDIR)/boot/boot: $(BOOT_OBJS)
 	@echo + ld boot/boot
+<<<<<<< HEAD:boot/Makefrag
 	$(V)$(LD) $(LDFLAGS) -N -e start -Ttext 0x7C00 -o $@.out $^
+=======
+	$(V)$(LD) -N -e start -Ttext 0x7C00 -o $@.out $^
+>>>>>>> master:boot/Makefrag
 	$(V)$(OBJDUMP) -S $@.out >$@.asm
 	$(V)$(OBJCOPY) -S -O binary $@.out $@
 	$(V)perl boot/sign.pl $(OBJDIR)/boot/boot

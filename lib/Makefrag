@@ -16,6 +16,7 @@ LIB_SRCFILES :=		$(LIB_SRCFILES) \
 			lib/fork.c \
 			lib/ipc.c
 
+<<<<<<< HEAD:lib/Makefrag
 LIB_SRCFILES :=		$(LIB_SRCFILES) \
 			lib/fd.c \
 			lib/file.c \
@@ -23,6 +24,9 @@ LIB_SRCFILES :=		$(LIB_SRCFILES) \
 			lib/fsipc.c \
 			lib/pageref.c \
 			lib/spawn.c
+=======
+
+>>>>>>> master:lib/Makefrag
 
 LIB_OBJFILES := $(patsubst lib/%.c, $(OBJDIR)/lib/%.o, $(LIB_SRCFILES))
 LIB_OBJFILES := $(patsubst lib/%.S, $(OBJDIR)/lib/%.o, $(LIB_OBJFILES))

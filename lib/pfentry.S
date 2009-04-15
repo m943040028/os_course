@@ -62,18 +62,51 @@ _pgfault_upcall:
 	//
 	// Hints:
 	//   What registers are available for intermediate calculations?
+<<<<<<< HEAD:lib/pfentry.S
 	//
 	// LAB 4: Your code here.
+=======
+
+	// skip utf_err and utf_fault_va
+	addl $8, %esp
+
+	// get trap-time esp
+	mov 0x28(%esp), %eax
+
+	// get original eip, and push to trap-time stack
+	// %ebx = original eip
+	subl $4, %eax
+	mov %eax, 0x28(%esp)
+	movl 0x20(%esp), %ebx
+	movl %ebx, (%eax)
+>>>>>>> master:lib/pfentry.S
 
 	// Restore the trap-time registers.
+<<<<<<< HEAD:lib/pfentry.S
 	// LAB 4: Your code here.
+=======
+	popal
+	addl $4, %esp
+>>>>>>> master:lib/pfentry.S
 
 	// Restore eflags from the stack.
+<<<<<<< HEAD:lib/pfentry.S
 	// LAB 4: Your code here.
+=======
+	popfl
+>>>>>>> master:lib/pfentry.S
 
 	// Switch back to the adjusted trap-time stack.
+<<<<<<< HEAD:lib/pfentry.S
 	// LAB 4: Your code here.
+=======
+	popl %esp
+>>>>>>> master:lib/pfentry.S
 
 	// Return to re-execute the instruction that faulted.
+<<<<<<< HEAD:lib/pfentry.S
 	// LAB 4: Your code here.
 
+=======
+	ret
+>>>>>>> master:lib/pfentry.S

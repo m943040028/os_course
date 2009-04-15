@@ -15,5 +15,15 @@ void monitor(struct Trapframe *tf);
 int mon_help(int argc, char **argv, struct Trapframe *tf);
 int mon_kerninfo(int argc, char **argv, struct Trapframe *tf);
 int mon_backtrace(int argc, char **argv, struct Trapframe *tf);
+<<<<<<< HEAD:kern/monitor.h
+=======
+int mon_showmapping(int argc, char **argv, struct Trapframe *tf);
+int mon_allocpage(int argc, char **argv, struct Trapframe *tf);
+int mon_freepage(int argc, char **argv, struct Trapframe *tf);
+int mon_dumpva(int argc, char **argv, struct Trapframe *tf);
+int mon_dumppa(int argc, char **argv, struct Trapframe *tf);
+int mon_buddyinfo(int argc, char **argv, struct Trapframe *tf);
+int mon_switch(int argc, char **argv, struct Trapframe *tf);
+>>>>>>> master:kern/monitor.h
 
 #endif	// !JOS_KERN_MONITOR_H
