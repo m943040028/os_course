@@ -2,3 +2,4 @@ obj
 bochs.log
 bochs.out
 lab?-handin.tar.gz
+serial_server
