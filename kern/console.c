@@ -220,22 +220,22 @@ parse_escape_sequence(int c)
 			return 0;
 		}
 		switch (c) {
-			case 'm':
-			{
-				// handle color attribute "\033[xx;xx;...m", where x is 0~9
-				char *ptr = &buf[0];
-				char *endptr;
+		case 'm':
+		{
+			// handle color attribute "\033[xx;xx;...m", where x is 0~9
+			char *ptr = &buf[0];
+			char *endptr;
 
-				buf[pos] = '\0';
-				do {
-					long val = strtol(ptr, &endptr, 10);
-					set_attribute(val);
-					ptr = endptr + 1;
-				} while(*endptr);
+			buf[pos] = '\0';
+			do {
+				long val = strtol(ptr, &endptr, 10);
+				set_attribute(val);
+				ptr = endptr + 1;
+			} while(*endptr);
 
-				escape = 0;
-				pos = 0;
-			}
+			escape = 0;
+			pos = 0;
+		}
 		default:
 			// don't handle others now
 			return 0;
