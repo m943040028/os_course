@@ -379,7 +379,7 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 	int r;
 	pte_t *pte = 0;
 
-	if (srcva && ((uintptr_t)srcva >= UTOP || (uintptr_t)srcva & ~PGSIZE
+	if (srcva && ((uintptr_t)srcva >= UTOP || (uintptr_t)srcva & (PGSIZE-1)
 		|| (perm & perm_check) != perm_check
 		|| !(pte = pgdir_walk(curenv->env_pgdir, srcva, 0))
 		|| (*pte & perm_check) != perm_check))
@@ -400,9 +400,13 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 		dst_env->env_status = ENV_RUNNABLE;
 
 		if (dst_env->env_ipc_perm && srcva) {
-			struct Page *pp = pa2page(PGOFF(pte));
+			struct Page *pp = pa2page(PTE_ADDR(*pte));
 
 			dst_env->env_ipc_perm = perm;
+			DBG(C_ENV, KDEBUG_VERBOSE,
+				"[%08x] insert page @ %08x(phys %08x) to [%08x] %08x\n",
+				curenv->env_id, srcva, PTE_ADDR(*pte), dst_env->env_id,
+				dst_env->env_ipc_dstva);
 			if ( (r = page_insert(dst_env->env_pgdir, pp,
 				dst_env->env_ipc_dstva, perm)) < 0)
 				return r;
@@ -430,7 +434,7 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 static int
 sys_ipc_recv(void *dstva)
 {
-	if (dstva && ((uintptr_t)dstva >= UTOP || (uintptr_t)dstva & ~PGSIZE))
+	if (dstva && ((uintptr_t)dstva >= UTOP || (uintptr_t)dstva & (PGSIZE - 1)))
 		return -E_INVAL;
 
 	curenv->env_ipc_recving = 1;

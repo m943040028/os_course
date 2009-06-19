@@ -9,7 +9,7 @@
 #include "fs.h"
 
 
-#define debug 0
+#define debug 1
 
 struct OpenFile {
 	uint32_t o_fileid;	// file id
@@ -271,12 +271,14 @@ serve_sync(envid_t envid)
 void
 serve(void)
 {
-	uint32_t req, whom;
+	int32_t req, whom;
 	int perm;
 	
 	while (1) {
 		perm = 0;
 		req = ipc_recv((int32_t *) &whom, (void *) REQVA, &perm);
+		if (req < 0)
+			panic("ipc_recv() failed: %e\n", req);
 		if (debug)
 			cprintf("fs req %d from %08x [page %08x: %s]\n",
 				req, whom, vpt[VPN(REQVA)], REQVA);

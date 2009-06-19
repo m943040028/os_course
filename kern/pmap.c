@@ -516,21 +516,21 @@ page_init(void)
         //    Current Physical Memory Layout:
         //
         //    | start of useable mem  |
-        //    +-----------------------+        <-- boot_freemem
+        //    +-----------------------+ <-- boot_freemem
         //    |                       |
         //    |      mempry pool      |                
         //    |     for boot_alloc    |
-        //    +-----------------------+        <-- end
+        //    +-----------------------+ <-- end
         //    |        .bss           |
-        //    +-----------------------+        <-- edata
+        //    +-----------------------+ <-- edata
         //    |        .data          |
         //    +-----------------------+
         //    |        .stabstr       |
-        //    +-----------------------+        <-- __STABSTR_BEGIN__
+        //    +-----------------------+ <-- __STABSTR_BEGIN__
         //    |        .stab          |
-        //    +-----------------------+        <-- __STAB_BEGIN__
+        //    +-----------------------+ <-- __STAB_BEGIN__
         //    |        .text          |
-        //    +-----------------------+        <-- EXTPHYSMEM (eXtended memory)
+        //    +-----------------------+ <-- EXTPHYSMEM (eXtended memory)
 
 	boot_freemem = ROUNDUP(boot_freemem, PGSIZE);
 	for (i = PPN(PADDR(boot_freemem)); i < PPN(maxpa); i++) {
@@ -595,8 +595,8 @@ pages_alloc(struct Page **pp_store, int order)
 			}
 
 			// We borrowed one object from bigger order, but we don't need 
-			// such big object. Split the big one, and insert half info 
-			// previous order. Loop until the order we requested is reached.
+			// such big an object. Split the big one, and insert a half onto
+			// current order. Loop until the order we requested is reached.
 			while (cur_order < order)
 			{
 				struct Page *buddy;		

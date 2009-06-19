@@ -415,8 +415,11 @@ file_dirty(struct File *f, off_t offset)
 	// Find the block and either write to dirty it or remap
 	// it with PTE_D set.
 	// Hint: Use file_get_block
-	// LAB 5: Your code here.
-	panic("file_dirty not implemented");
+	if ( (r = file_get_block(f, offset/BLKSIZE, &blk)))
+		return r;
+
+	// make it accessed and dirty
+	*(volatile char *)blk = blk[0];
 
 	return 0;
 }
