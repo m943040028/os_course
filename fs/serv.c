@@ -204,9 +204,20 @@ serve_map(envid_t envid, struct Fsreq_map *rq)
 	// by using ipc_send.
 	// Map read-only unless the file's open mode (o->o_mode) allows writes
 	// (see the O_ flags in inc/lib.h).
-	
-	// LAB 5: Your code here.
-	panic("serve_map not implemented");
+
+	if ((r = openfile_lookup(envid, rq->req_fileid, &o)) < 0)
+		goto out;
+
+	if ((r = file_get_block(o->o_file, rq->req_offset/BLKSIZE, &blk)) < 0)
+		goto out;
+
+	perm = PTE_U|PTE_P;
+	if (o->o_mode & O_RDWR)
+		perm |= PTE_W;
+	ipc_send(envid, r, blk, perm);
+	return;
+out:
+	ipc_send(envid, r, 0, 0);
 }
 
 void

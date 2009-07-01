@@ -377,12 +377,12 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 	struct Env *dst_env;
 	int perm_check = PTE_U | PTE_P;
 	int r;
-	pte_t *pte = 0;
+	pte_t *ppte = 0;
 
 	if (srcva && ((uintptr_t)srcva >= UTOP || (uintptr_t)srcva & (PGSIZE-1)
 		|| (perm & perm_check) != perm_check
-		|| !(pte = pgdir_walk(curenv->env_pgdir, srcva, 0))
-		|| (*pte & perm_check) != perm_check))
+		|| !(ppte = pgdir_walk(curenv->env_pgdir, srcva, 0))
+		|| (*ppte & perm_check) != perm_check))
 		return -E_INVAL;
 
 	if ( (r = envid2env(envid, &dst_env, 0)) < 0)
@@ -400,12 +400,12 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 		dst_env->env_status = ENV_RUNNABLE;
 
 		if (dst_env->env_ipc_perm && srcva) {
-			struct Page *pp = pa2page(PTE_ADDR(*pte));
+			struct Page *pp = pa2page(PTE_ADDR(*ppte));
 
 			dst_env->env_ipc_perm = perm;
 			DBG(C_ENV, KDEBUG_VERBOSE,
 				"[%08x] insert page @ %08x(phys %08x) to [%08x] %08x\n",
-				curenv->env_id, srcva, PTE_ADDR(*pte), dst_env->env_id,
+				curenv->env_id, srcva, PTE_ADDR(*ppte), dst_env->env_id,
 				dst_env->env_ipc_dstva);
 			if ( (r = page_insert(dst_env->env_pgdir, pp,
 				dst_env->env_ipc_dstva, perm)) < 0)

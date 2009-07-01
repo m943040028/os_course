@@ -59,10 +59,16 @@ fsipc_map(int fileid, off_t offset, void *dstva)
 	// Check the return value from the IPC and 
 	// make sure that the permissions on the 
 	// returned page are at least PTE_U and PTE_P.
+	req = (struct Fsreq_map *)fsipcbuf;
+	req->req_fileid = fileid;
+	req->req_offset = offset;
 
-	// LAB 5: Your code here.
-	panic("fsipc_map not implemented");
-	
+	if ( (r = fsipc(FSREQ_MAP, req, dstva, &perm)))
+		return r;
+
+	if ( (perm & (PTE_U|PTE_P)) != (PTE_U|PTE_P))
+		panic("%s, return wrong perm\n");
+
 	return 0;
 }
 
