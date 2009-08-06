@@ -34,6 +34,7 @@ void cons_intr(int (*proc)(void));
 #define	  COM_MCR_OUT2	0x08	// Out2 complement
 #define COM_LSR		5	// In:	Line Status Register
 #define   COM_LSR_DATA	0x01	//   Data available
+#define   COM_LSR_TX	0x20	//   Transmit buffer available
 
 static bool serial_exists;
 static uint8_t attribute;
@@ -121,6 +122,14 @@ lpt_putc(int c)
 	outb(0x378+2, 0x08);
 }
 
+static void
+serial_putc(int c)
+{
+	if (serial_exists) {
+		while (!(inb(COM1+COM_LSR) & COM_LSR_TX));
+		outb(COM1+COM_TX, c);
+	}
+}
 
 
 
@@ -523,7 +532,8 @@ void
 cons_putc(int c)
 {
 	lpt_putc(c);
-	cga_putc(c);
+	serial_putc(c);
+	//cga_putc(c);
 }
 
 // initialize the console devices

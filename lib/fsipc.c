@@ -102,8 +102,10 @@ fsipc_dirty(int fileid, off_t offset)
 {
 	struct Fsreq_dirty *req;
 	
-	// LAB 5: Your code here.
-	panic("fsipc_dirty not implemented");
+	req = (struct Fsreq_dirty *) fsipcbuf;
+	req->req_fileid = fileid;
+	req->req_offset = offset;
+	return fsipc(FSREQ_DIRTY, req, 0, 0);
 }
 
 // Ask the file server to delete a file, given its pathname.

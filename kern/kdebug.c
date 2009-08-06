@@ -245,7 +245,7 @@ debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
 }
 
 // custom debug staff
-static uint8_t kdebug_level = KDEBUG_VERBOSE;
+static uint8_t kdebug_level = KDEBUG_FLOW;
 static uint32_t interesting_catelog = C_ENV;
 static uint8_t quiet;
 

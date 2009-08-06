@@ -6,7 +6,9 @@
 #include <netdb.h>
 #include <string.h>
 #include <signal.h>
-
+#include <sys/select.h>
+#include <unistd.h>
+#include <fcntl.h>
 #define PORT 1234
 
 
@@ -23,7 +25,9 @@ int
 main()
 {
 	int	addrlen;
-	int	ch;
+	int	input_fd;
+	fd_set	read_fd;
+	char	buf[512];
 
 	struct sockaddr_in sin;
 	struct sockaddr_in pin;
@@ -33,6 +37,11 @@ main()
 	sa.sa_handler = func;
 
 	sigaction(SIGINT, &sa, &sa);
+
+	if ((input_fd = open("/dev/stdin", O_RDONLY)) < 0) {
+		perror("cannot open stdin");
+		exit(1);
+	}
 
 	/* get an internet domain socket */
 	if ((sd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
@@ -71,7 +80,24 @@ main()
         }
 	
 	printf("Connected!!\n");
+	while (1) {
+		int n;
+		FD_ZERO(&read_fd);
+		FD_SET(input_fd, &read_fd);
+		FD_SET(sd_current, &read_fd);
+		if ((select(sd_current+1, &read_fd, NULL, NULL, NULL)) < 0) {
+			perror("select");
+			exit(1);
+		}
 
-	while (ch = getchar())
-		send(sd_current, &ch, 1, 0);
+		if (FD_ISSET(input_fd, &read_fd)) {
+			n = read(input_fd, buf, sizeof(buf));
+			write(sd_current, buf, n);
+		}
+
+		if (FD_ISSET(sd_current, &read_fd)) {
+			n = read(sd_current, buf, sizeof(buf));
+			write(STDOUT_FILENO, buf, n);
+		}
+	}
 }

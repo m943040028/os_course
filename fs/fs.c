@@ -328,6 +328,7 @@ file_block_walk(struct File *f, uint32_t filebno, uint32_t **ppdiskbno, bool all
 		if ( (r = read_block(f->f_indirect, &blk)) < 0)
 			return r;
 		ptr = (uint32_t *)blk;
+		ptr += 10;
 		ptr += (filebno - NDIRECT);
 	}
 	else

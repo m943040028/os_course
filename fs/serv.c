@@ -267,9 +267,11 @@ serve_dirty(envid_t envid, struct Fsreq_dirty *rq)
 
 	// Find the file and dirty the file at the requested offset.
 	// Send the return value back using ipc_send.
-	// LAB 5: Your code here.
-	panic("serve_dirty not implemented");
-
+	if ((r = openfile_lookup(envid, rq->req_fileid, &o)) < 0)
+		goto out;
+	r = file_dirty(o->o_file, rq->req_offset/BLKSIZE);
+  out:
+	ipc_send(envid, r, 0, 0);
 }
 
 void

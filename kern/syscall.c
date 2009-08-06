@@ -305,6 +305,10 @@ sys_page_map(envid_t srcenvid, void *srcva,
 	if (perm & PTE_W && !(*src_pte & PTE_W))
 		return -E_INVAL;
 
+	DBG(C_ENV, KDEBUG_VERBOSE,
+		"[%08x] map page from %08x(phys %08x) to [%08x] %08x\n",
+		src_env->env_id, srcva, page2pa(src_pp), dst_env->env_id, dstva);
+
 	if ( (r = page_insert(dst_env->env_pgdir, src_pp, dstva, perm)) < 0)
 		return r;
 
@@ -332,6 +336,9 @@ sys_page_unmap(envid_t envid, void *va)
 	if (PGOFF(va) || (uintptr_t)va >= UTOP)
 		return -E_INVAL;
 
+	DBG(C_ENV, KDEBUG_VERBOSE,
+		"[%08x] unmap page from %08x\n",
+		curenv->env_id, va);
 	page_remove(e->env_pgdir, va);
 
 	return 0;
@@ -483,6 +490,8 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		return sys_page_unmap((envid_t)a1, (void *)a2);
 	case SYS_env_set_pgfault_upcall:
 		return sys_env_set_pgfault_upcall((envid_t)a1, (void *)a2);
+	case SYS_env_set_trapframe:
+		return sys_env_set_trapframe((envid_t)a1, (struct Trapframe *)a2);
 	case SYS_yield:
 		sys_yield();
 		// should never return
