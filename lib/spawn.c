@@ -64,6 +64,7 @@ spawn(const char *prog, const char **argv)
 							 fd, ph->p_filesz, ph->p_offset, perm)) < 0)
 			goto error;
 	}
+
 	close(fd);
 	fd = -1;
 	
@@ -163,7 +164,8 @@ map_segment(envid_t child, uintptr_t va, size_t memsz,
 	int i, r;
 	void *blk;
 
-	//cprintf("map_segment %x+%x\n", va, memsz);
+	cprintf("map_segment va %x memsz %x filesz %x fileoffset %x\n",
+		va, memsz, filesz, fileoffset);
 
 	if ((i = PGOFF(va))) {
 		va -= i;

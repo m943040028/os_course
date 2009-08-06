@@ -62,18 +62,29 @@ _pgfault_upcall:
 	//
 	// Hints:
 	//   What registers are available for intermediate calculations?
-	//
-	// LAB 4: Your code here.
+
+	// skip utf_err and utf_fault_va
+	addl $8, %esp
+
+	// get trap-time esp
+	mov 0x28(%esp), %eax
+
+	// get original eip, and push to trap-time stack
+	// %ebx = original eip
+	subl $4, %eax
+	mov %eax, 0x28(%esp)
+	movl 0x20(%esp), %ebx
+	movl %ebx, (%eax)
 
 	// Restore the trap-time registers.
-	// LAB 4: Your code here.
+	popal
+	addl $4, %esp
 
 	// Restore eflags from the stack.
-	// LAB 4: Your code here.
+	popfl
 
 	// Switch back to the adjusted trap-time stack.
-	// LAB 4: Your code here.
+	popl %esp
 
 	// Return to re-execute the instruction that faulted.
-	// LAB 4: Your code here.
-
+	ret

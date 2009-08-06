@@ -37,6 +37,13 @@ SECTIONS
 				   for this section */
 	}
 
+	. = ALIGN(4);
+	.idt_patcher : {
+		PROVIDE(__IDT_PATCHER_BEGIN__ = .);
+		*(.idt_patcher);
+		PROVIDE(__IDT_PATCHER_END__ = .);
+	}
+
 	/* Adjust the address for the data segment to the next page */
 	. = ALIGN(0x1000);
 

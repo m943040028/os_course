@@ -36,7 +36,6 @@ struct Env;
 })
 
 
-
 extern char bootstacktop[], bootstack[];
 
 extern struct Page *pages;
@@ -52,11 +51,14 @@ void	i386_vm_init();
 void	i386_detect_memory();
 
 void	page_init(void);
-int	page_alloc(struct Page **pp_store);
-void	page_free(struct Page *pp);
+void	page_check(void);
+int	pages_alloc(struct Page **pp_store, int order);
+void	pages_free(struct Page *pp, int order);
+int	get_order(unsigned long size);
 int	page_insert(pde_t *pgdir, struct Page *pp, void *va, int perm);
 void	page_remove(pde_t *pgdir, void *va);
-struct Page *page_lookup(pde_t *pgdir, void *va, pte_t **pte_store);
+struct 	Page *page_lookup(pde_t *pgdir, void *va, pte_t **pte_store);
+int	page_map_segment(pde_t *pgdir, struct Page *pp, void *va, size_t size, int perm);
 void	page_decref(struct Page *pp);
 
 void	tlb_invalidate(pde_t *pgdir, void *va);
@@ -68,6 +70,12 @@ static inline ppn_t
 page2ppn(struct Page *pp)
 {
 	return pp - pages;
+}
+
+static inline struct Page*
+ppn2page(ppn_t pp)
+{
+	return pages + pp;
 }
 
 static inline physaddr_t
@@ -90,6 +98,24 @@ page2kva(struct Page *pp)
 	return KADDR(page2pa(pp));
 }
 
+static inline struct Page*
+kva2page(uintptr_t kva)
+{
+	return pa2page(PADDR(kva));
+}
+
 pte_t *pgdir_walk(pde_t *pgdir, const void *va, int create);
+
+void dump_mapping(uintptr_t from, uintptr_t to);
+void dump_phys(physaddr_t paddr, size_t len, size_t word);
+void dump_virt(physaddr_t vaddr, size_t len, size_t word);
+
+// Buddy system specific
+#define page_free(pp)	pages_free(pp, 0)
+void 	pages_free(struct Page *pp, int order);
+#define page_alloc(pp)	pages_alloc(pp, 0)
+int 	pages_alloc(struct Page **pp_store, int order);
+
+void 	buddy_info(void);
 
 #endif /* !JOS_KERN_PMAP_H */

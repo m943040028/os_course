@@ -15,7 +15,9 @@ extern struct Gatedesc idt[];
 void idt_init(void);
 void print_regs(struct PushRegs *regs);
 void print_trapframe(struct Trapframe *tf);
+void break_point_handler(struct Trapframe *);
 void page_fault_handler(struct Trapframe *);
 void backtrace(struct Trapframe *);
+void enable_sep(void);
 
 #endif /* JOS_KERN_TRAP_H */

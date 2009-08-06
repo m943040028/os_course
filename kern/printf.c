@@ -4,7 +4,7 @@
 #include <inc/types.h>
 #include <inc/stdio.h>
 #include <inc/stdarg.h>
-
+#include <inc/string.h>
 
 static void
 putch(int ch, int *cnt)

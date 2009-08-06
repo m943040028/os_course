@@ -26,6 +26,9 @@ ifndef LABSETUP
 LABSETUP := ./
 endif
 
+ifndef BXSHARE
+BXSHARE := $(PWD)/bochs/bios
+endif
 
 TOP = .
 
@@ -60,6 +63,7 @@ LD	:= $(GCCPREFIX)ld
 OBJCOPY	:= $(GCCPREFIX)objcopy
 OBJDUMP	:= $(GCCPREFIX)objdump
 NM	:= $(GCCPREFIX)nm
+BOCHS	:= BXSHARE=$(BXSHARE) bochs
 
 # Native commands
 NCC	:= gcc $(CC_VER) -pipe
@@ -84,7 +88,6 @@ LDFLAGS := -m elf_i386
 
 # Linker flags for JOS user programs
 ULDFLAGS := -T user/user.ld
-
 GCC_LIB := $(shell $(CC) $(CFLAGS) -print-libgcc-file-name)
 
 # Lists that the */Makefrag makefile fragments will add to
@@ -114,7 +117,6 @@ USER_CFLAGS := $(CFLAGS) -DJOS_USER -gstabs
 
 
 
-
 # Include Makefrags for subdirectories
 include boot/Makefrag
 include kern/Makefrag
@@ -125,9 +127,8 @@ include net/Makefrag
 
 
 IMAGES = $(OBJDIR)/kern/bochs.img $(OBJDIR)/fs/fs.img
-
 bochs: $(IMAGES)
-	bochs 'display_library: nogui'
+	$(BOCHS) 'display_library: nogui'
 
 # For deleting the build
 clean:
@@ -142,7 +143,7 @@ distclean: realclean
 grade: $(LABSETUP)grade.sh
 	$(V)$(MAKE) clean >/dev/null 2>/dev/null
 	$(MAKE) all
-	sh $(LABSETUP)grade.sh
+	BXSHARE=$(BXSHARE) sh $(LABSETUP)grade.sh
 
 handin: tarball
 	@echo Please visit http://pdos.csail.mit.edu/cgi-bin/828handin
@@ -155,12 +156,12 @@ tarball: realclean
 run-%:
 	$(V)rm -f $(OBJDIR)/kern/init.o $(IMAGES)
 	$(V)$(MAKE) "DEFS=-DTEST=_binary_obj_user_$*_start -DTESTSIZE=_binary_obj_user_$*_size" $(IMAGES)
-	bochs -q 'display_library: nogui'
+	$(BOCHS) -q 'display_library: nogui'
 
 xrun-%:
 	$(V)rm -f $(OBJDIR)/kern/init.o $(IMAGES)
 	$(V)$(MAKE) "DEFS=-DTEST=_binary_obj_user_$*_start -DTESTSIZE=_binary_obj_user_$*_size" $(IMAGES)
-	bochs -q
+	$(BOCHS) -q
 
 TAGS:
 	etags */*.[chS] */*/*.[chS] */*/*/*.[chS] */*/*/*/*.[chS] */*/*/*/*/*.[chS]
@@ -182,4 +183,4 @@ always:
 	@:
 
 .PHONY: all always \
-	handin tarball clean realclean clean-labsetup distclean grade labsetup
+	handin tarball clean realclean clean-labsetup distclean grade labsetup bochs

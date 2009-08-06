@@ -135,9 +135,10 @@ memmove(void *dst, const void *src, size_t n)
 {
 	const char *s;
 	char *d;
-	
+
 	s = src;
 	d = dst;
+
 	if (s < d && s + n > d) {
 		s += n;
 		d += n;
@@ -170,12 +171,10 @@ memset(void *v, int c, size_t n)
 	m = n;
 	while (--m >= 0)
 		*p++ = c;
-
 	return v;
 }
 
 /* no memcpy - use memmove instead */
-
 void *
 memmove(void *dst, const void *src, size_t n)
 {

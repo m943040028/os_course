@@ -1,7 +1,6 @@
-#!/usr/bin/perl
+#!/bin/perl
 
 open(BB, $ARGV[0]) || die "open $ARGV[0]: $!";
-
 binmode BB;
 my $buf;
 read(BB, $buf, 1000);

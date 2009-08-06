@@ -45,6 +45,18 @@ struct Secthdr {
 	uint32_t sh_entsize;
 };
 
+// Symbol table entry
+struct Symtab_entry
+{
+	uint32_t st_name;                /* Symbol name (string tbl index) */
+	uint32_t st_value;               /* Symbol value */
+	uint32_t st_size;                /* Symbol size */
+	uint8_t  st_info;                /* Symbol type and binding */
+	uint8_t  st_other;               /* Symbol visibility */
+	uint16_t st_shndx;               /* Section index */
+};
+
+
 // Values for Proghdr::p_type
 #define ELF_PROG_LOAD		1
 
@@ -58,6 +70,12 @@ struct Secthdr {
 #define ELF_SHT_PROGBITS	1
 #define ELF_SHT_SYMTAB		2
 #define ELF_SHT_STRTAB		3
+#define ELF_SHT_NOBITS		8
+
+// Values for Secthdr::sh_flags
+#define ELF_SHF_WRITE		1
+#define ELF_SHF_ALLOC		2
+#define ELF_SHF_EXECINSTR	4
 
 // Values for Secthdr::sh_name
 #define ELF_SHN_UNDEF		0

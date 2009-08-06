@@ -5,15 +5,23 @@
 #include <inc/string.h>
 #include <inc/memlayout.h>
 #include <inc/assert.h>
+#include <inc/error.h>
 #include <inc/x86.h>
 
 #include <kern/console.h>
 #include <kern/monitor.h>
-#include <kern/kdebug.h>
 #include <kern/trap.h>
+#include <kern/kdebug.h>
+#include <kern/pmap.h>
+#include <kern/env.h>
 
 #define CMDBUF_SIZE	80	// enough for one VGA text line
 
+// TODO:
+//   (1) Step an instruction
+//   (2) Continue execution
+//   (3) Online kernel debugger, in assemble level
+//   (4) Shortcut for each command
 
 struct Command {
 	const char *name;
@@ -25,6 +33,14 @@ struct Command {
 static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
+	{ "backtrace", "Traceback the call stack", mon_backtrace },
+	{ "showmapping", "Dump virtual memory mapping", mon_showmapping },
+	{ "switch", "Switch address space", mon_switch },
+	{ "allocpage", "Allocating memory", mon_allocpage },
+	{ "freepage", "Freeing memory", mon_freepage },
+	{ "dumpva", "Dump virtual memory contents", mon_dumpva },
+	{ "dumppa", "Dump physical memory contents", mon_dumppa },
+	{ "buddyinfo", "Free memory information", mon_buddyinfo },
 };
 #define NCOMMANDS (sizeof(commands)/sizeof(commands[0]))
 
@@ -57,14 +73,197 @@ mon_kerninfo(int argc, char **argv, struct Trapframe *tf)
 	return 0;
 }
 
+// Call stack overview on i386 architecture:
+//
+//	|		| <-- Last EBP
+//	~~~~~~~~~~~~~~~~~
+//	:	.	:
+//	:	.	:
+//	~~~~~~~~~~~~~~~~~
+//	| Arg 1		|
+//	+---------------+
+//	| Arg 0		|
+//	+---------------+
+//	| Return addr	|
+//	+---------------+
+//	| Last EBP	| <-- current EBP
+//	+---------------+
+//	| local var 0	|
+//	+---------------+
+//	| local var 1 	| <-- current ESP
+//
+//
 int
 mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 {
-	// Your code here.
+	uint32_t *ebp = (uint32_t *)read_ebp();
+	uint32_t current_pc = read_eip();
+
+	// We stop at top level function.
+	// EBP is set to zero at the kernel entry point.
+	cprintf("Stack Backtace:\n");
+	while ((uint32_t) ebp)
+	{
+		int i;
+		struct Eipdebuginfo info;
+		char name[40];
+
+		if (debuginfo_eip(current_pc, &info) < 0)
+			panic("debuginfo_eip failed\n");
+
+		strncpy(name, info.eip_fn_name, info.eip_fn_namelen);
+		name[info.eip_fn_namelen] = '\0';
+		cprintf("%s:%d: %s+%d\n", 
+			info.eip_file,
+			info.eip_line,
+			name,
+			current_pc - info.eip_fn_addr
+			);
+		cprintf("ebp %08x eip %08x args %s", ebp, current_pc,
+			info.eip_fn_narg ? "" : "(none)");
+		for (i = 0; i < info.eip_fn_narg; i++) 
+			cprintf("%08x ", *(ebp + 2 + i));
+		cprintf("\n");
+
+		// get last pc
+		current_pc = *(ebp + 1) - 4;
+
+		// get last ebp
+		ebp = (uint32_t *) *ebp;
+	}
+
 	return 0;
 }
 
+int
+mon_showmapping(int argc, char **argv, struct Trapframe *tf)
+{
+	if (argc != 3) {
+		cprintf("usage: %s <from> <to>\n", argv[0]);
+		return 0;
+	}
 
+	uintptr_t addr[3];
+	int i;
+
+	for (i = 1; i < 3; i++)
+		addr[i] = (uintptr_t) strtol(argv[i], NULL, 0);
+
+	if (addr[2] < addr[1]) return 0;
+
+	dump_mapping(addr[1], addr[2]);
+
+	return 0;
+}
+
+int mon_allocpage(int argc, char **argv, struct Trapframe *tf)
+{
+	struct Page *pp;
+	int order;
+	if (argc != 2) {
+		cprintf("usage: %s <order>\n", argv[0]);
+		return 0;
+	}
+
+	order = strtol(argv[1], NULL, 0);
+	
+	if (-E_NO_MEM == pages_alloc(&pp, order)) {
+		cprintf("allocting failed\n");
+		return 0;
+	}
+	cprintf("kvaddr: %x, ppn: %x, order: %d\n", 
+		page2kva(pp), page2ppn(pp), order);
+
+	return 0;
+}
+
+int mon_freepage(int argc, char **argv, struct Trapframe *tf)
+{
+	struct Page *pp;
+	int vaddr, order;
+
+	if (argc != 3) {
+		cprintf("usage: %s <kaddr> <order>\n", argv[0]);
+		return 0;
+	}
+
+	vaddr = strtol(argv[1], NULL, 0);
+	order = strtol(argv[2], NULL, 0);
+
+	if (vaddr < KERNBASE) {
+		cprintf("you give wrong address\n");
+		return 0;
+	}
+
+	pp = pa2page(PADDR(vaddr));
+	pages_free(pp, order);
+	return 0;
+}
+
+int mon_dumpva(int argc, char **argv, struct Trapframe *tf)
+{
+	uintptr_t vaddr;
+	size_t len;
+	size_t word;
+
+	if (argc != 4) {
+		cprintf("usage: %s <vaddr> <len> <word>\n", argv[0]);
+		return 0;
+	}
+
+	vaddr = strtol(argv[1], NULL, 0);
+	len = strtol(argv[2], NULL, 0);
+	word = strtol(argv[3], NULL, 0);
+
+	dump_virt(vaddr, len, word);
+
+	return 0;
+}
+
+int mon_dumppa(int argc, char **argv, struct Trapframe *tf)
+{
+	uintptr_t vaddr;
+	size_t len;
+	size_t word;
+
+	if (argc != 4) {
+		cprintf("usage: %s <paddr> <len> <word>\n", argv[0]);
+		return 0;
+	}
+
+	vaddr = strtol(argv[1], NULL, 0);
+	len = strtol(argv[2], NULL, 0);
+	word = strtol(argv[3], NULL, 0);
+
+	dump_phys(vaddr, len, word);
+
+	return 0;
+}
+
+int mon_buddyinfo(int argc, char **argv, struct Trapframe *tf)
+{
+	buddy_info();
+	return 0;
+}
+
+int mon_switch(int argc, char **argv, struct Trapframe *tf)
+{
+	int r;
+	struct Env *env;
+	if (argc != 2) {
+		cprintf("usage: %s <envid>\n", argv[0]);
+		return 0;
+	}
+	envid_t target_id = (envid_t)strtol(argv[1], NULL, 0);
+
+	if (envid2env(target_id, &env, 0) < 0) {
+		cprintf("No such environment\n");
+		return 0;
+	}
+	lcr3(env->env_cr3);
+	cprintf("Switched to environment: %x\n", env->env_id);
+	return 0;
+}
 
 /***** Kernel monitor command interpreter *****/
 

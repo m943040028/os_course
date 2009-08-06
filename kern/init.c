@@ -33,9 +33,13 @@ i386_init(void)
 
 	cprintf("6828 decimal is %o octal!\n", 6828);
 
+	enable_sep();
+
 	// Lab 2 memory management initialization functions
 	i386_detect_memory();
 	i386_vm_init();
+	page_init();
+	page_check();
 
 	// Lab 3 user environment initialization functions
 	env_init();
@@ -50,7 +54,7 @@ i386_init(void)
 	// Should always have an idle process as first one.
 	ENV_CREATE(user_idle);
 
-	// Start fs.
+	// File system server should be the second one
 	ENV_CREATE(fs_fs);
 
 	// Start the network server.
@@ -63,14 +67,11 @@ i386_init(void)
 	ENV_CREATE2(TEST, TESTSIZE);
 #else
 	// Touch all you want.
-	ENV_CREATE(user_primes);
+	ENV_CREATE(user_writemotd);
 #endif // TEST*
-
 
 	// Schedule and run the first user environment!
 	sched_yield();
-
-
 }
 
 

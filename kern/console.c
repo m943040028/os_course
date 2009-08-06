@@ -18,6 +18,7 @@ void cons_intr(int (*proc)(void));
 #define COM1		0x3F8
 
 #define COM_RX		0	// In:	Receive buffer (DLAB=0)
+#define COM_TX		0	// Out: Transmit buffer (DLAB=0)
 #define COM_DLL		0	// Out: Divisor Latch Low (DLAB=1)
 #define COM_DLM		1	// Out: Divisor Latch High (DLAB=1)
 #define COM_IER		1	// Out: Interrupt Enable Register
@@ -33,8 +34,15 @@ void cons_intr(int (*proc)(void));
 #define	  COM_MCR_OUT2	0x08	// Out2 complement
 #define COM_LSR		5	// In:	Line Status Register
 #define   COM_LSR_DATA	0x01	//   Data available
+#define   COM_LSR_TX	0x20	//   Transmit buffer available
 
 static bool serial_exists;
+static uint8_t attribute;
+
+typedef struct {
+	uint8_t	fore : 4;
+	uint8_t	back : 4;
+} attribute_t;
 
 int
 serial_proc_data(void)
@@ -97,6 +105,11 @@ delay(void)
 	inb(0x84);
 }
 
+/*
+0378    w       data port
+0379    r/w     status port
+037A    r/w     control port
+*/
 static void
 lpt_putc(int c)
 {
@@ -109,6 +122,14 @@ lpt_putc(int c)
 	outb(0x378+2, 0x08);
 }
 
+static void
+serial_putc(int c)
+{
+	if (serial_exists) {
+		while (!(inb(COM1+COM_LSR) & COM_LSR_TX));
+		outb(COM1+COM_TX, c);
+	}
+}
 
 
 
@@ -146,14 +167,104 @@ cga_init(void)
 	crt_pos = pos;
 }
 
+static inline void
+set_attribute(long val)
+{
+	attribute_t *attr = (attribute_t *) &attribute;
 
+	switch (val)
+	{
+	case FORE_BLACK:	attr->fore = pc_black;	break;
+	case FORE_RED:		attr->fore = pc_red;	break;
+	case FORE_GREEN:	attr->fore = pc_green;	break;
+	case FORE_YELLOW:	attr->fore = pc_yellow;	break;
+	case FORE_BLUE:		attr->fore = pc_blue;	break;
+	case FORE_MAGENTA:	attr->fore = pc_magenta;break;
+	case FORE_CYAN:		attr->fore = pc_cyan;	break;
+	case FORE_WHITE:	attr->fore = pc_white;	break;
+
+	case BACK_BLACK:	attr->back = pc_black;	break;
+	case BACK_RED:		attr->back = pc_red;	break;
+	case BACK_GREEN:	attr->back = pc_green;	break;
+	case BACK_YELLOW:	attr->back = pc_yellow;	break;
+	case BACK_BLUE:		attr->back = pc_blue;	break;
+	case BACK_MAGENTA:	attr->back = pc_magenta;break;
+	case BACK_CYAN:		attr->back = pc_cyan;	break;
+	case BACK_WHITE:	attr->back = pc_white;	break;
+
+	case ATTR_RESET:	attr->fore = pc_white;
+				attr->back = pc_black;  break;
+	default:
+		//other attribute do nothing!!
+		;
+	}
+}
+
+static inline uint16_t
+parse_escape_sequence(int c)
+{
+	static uint8_t escape = 0;
+	static char buf[20];
+	static int pos;
+
+	// ASCII escape string started with "\033["
+	if (c == '\033') {
+		escape++;
+		return 0;
+	}
+
+	if (c == '[' && escape) {
+		escape++;
+		pos = 0;
+		return 0;
+	}
+	// first character is escape, but second caracter is not '[', disable escape
+	else if (c != '[' && escape == 1) escape = 0;
+
+	if (escape > 1) 
+	{
+		// escape sequence is followed by numbers
+		if ((c <= '9' && c >= '0') || c == ';') {
+			buf[pos++] = c; 
+			return 0;
+		}
+		switch (c) {
+		case 'm':
+		{
+			// handle color attribute "\033[xx;xx;...m", where x is 0~9
+			char *ptr = &buf[0];
+			char *endptr;
+
+			buf[pos] = '\0';
+			do {
+				long val = strtol(ptr, &endptr, 10);
+				set_attribute(val);
+				ptr = endptr + 1;
+			} while(*endptr);
+
+			escape = 0;
+			pos = 0;
+		}
+		default:
+			// don't handle others now
+			return 0;
+		}
+	}
+
+	if (attribute) 
+		c |= attribute << 8;
+
+	return c;
+}
 
 void
 cga_putc(int c)
 {
+	if ( !(c = parse_escape_sequence(c))) return;
+
 	// if no attribute given, then use black on white
-	if (!(c & ~0xFF))
-		c |= 0x0700;
+	if ( !(c & ~0xff))
+		c |= (pc_black << 4 | pc_white) << 8;
 
 	switch (c & 0xff) {
 	case '\b':
@@ -180,7 +291,7 @@ cga_putc(int c)
 		break;
 	}
 
-	// What is the purpose of this?
+	// Scroll down the screen
 	if (crt_pos >= CRT_SIZE) {
 		int i;
 
@@ -421,7 +532,8 @@ void
 cons_putc(int c)
 {
 	lpt_putc(c);
-	cga_putc(c);
+	serial_putc(c);
+	//cga_putc(c);
 }
 
 // initialize the console devices

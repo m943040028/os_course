@@ -74,8 +74,17 @@ read_block(uint32_t blockno, char **blk)
 	if (bitmap && block_is_free(blockno))
 		panic("reading free block %08x\n", blockno);
 
-	// LAB 5: Your code here.
-	panic("read_block not implemented");
+	if ( (r = map_block(blockno)) < 0)
+		return r;
+	addr = diskaddr(blockno);
+	assert(va_is_mapped(addr));
+
+	if ( (r = ide_read(blockno * BLKSECTS, addr, BLKSECTS)) < 0)
+		return r;
+
+	if (blk)
+		*blk = addr;
+
 	return 0;
 }
 
@@ -86,14 +95,24 @@ read_block(uint32_t blockno, char **blk)
 void
 write_block(uint32_t blockno)
 {
+	int r;
 	char *addr;
+	pte_t pte;
 
 	if (!block_is_mapped(blockno))
 		panic("write unmapped block %08x", blockno);
-	
+
+	addr = diskaddr(blockno);
+
+	if (ide_write(blockno * BLKSECTS, diskaddr(blockno), BLKSECTS) < 0)
+		panic("ide write failed\n");
+
 	// Write the disk block and clear PTE_D.
-	// LAB 5: Your code here.
-	panic("write_block not implemented");
+	pte = vpt[VPN(addr)];
+	pte &= PTE_USER;
+	if ((r = sys_page_map(0, diskaddr(blockno), 0, diskaddr(blockno), pte) < 0))
+		panic("sys_page_map: %e\n", r);
+	pte = vpt[VPN(addr)];
 }
 
 // Make sure this block is unmapped.
@@ -141,8 +160,16 @@ free_block(uint32_t blockno)
 int
 alloc_block_num(void)
 {
-	// LAB 5: Your code here.
-	panic("alloc_block_num not implemented");
+	int blockno;
+
+	for (blockno = 0; blockno < super->s_nblocks; blockno++) {
+
+		if (block_is_free(blockno)) {
+			bitmap[blockno/32] &= ~(1<<(blockno%32));
+			return blockno;
+		}
+	}
+	
 	return -E_NO_DISK;
 }
 
@@ -157,12 +184,15 @@ alloc_block_num(void)
 int
 alloc_block(void)
 {
-
-	// LAB 5: Your code here.
 	int r, bno;
 
-	panic("alloc_block not implemented");
-	return -E_NO_DISK;
+	bno = alloc_block_num();
+	if (bno < 0) return bno;
+
+	if ( (r = map_block(bno) < 0))
+		panic("cannot map block: %e\n", r);
+
+	return bno;
 }
 
 // Read and validate the file system super-block.
@@ -282,12 +312,38 @@ file_block_walk(struct File *f, uint32_t filebno, uint32_t **ppdiskbno, bool all
 	uint32_t *ptr;
 	char *blk;
 
+	assert(ppdiskbno);
+
 	// Hint: Remember that the first 10 indirect entries are unused 
 	// for easier bookkeeping.
 	// Hint: Use read_block for accessing the indirect block
-	// LAB 5: Your code here.
-	panic("file_block_walk not implemented");
-	
+	if (filebno < NDIRECT)
+		ptr = &f->f_direct[filebno];
+	else if (filebno < NINDIRECT) {
+
+		if (!f->f_indirect) {
+			int indirect = alloc_block();
+			f->f_indirect = indirect;
+		}
+		if ( (r = read_block(f->f_indirect, &blk)) < 0)
+			return r;
+		ptr = (uint32_t *)blk;
+		ptr += 10;
+		ptr += (filebno - NDIRECT);
+	}
+	else
+		return -E_INVAL;
+
+	if (!*ptr) {
+		if (alloc) {
+			int bno = alloc_block();
+			*ptr = bno;
+		} else
+			return -E_NOT_FOUND;
+	}
+
+	*ppdiskbno = ptr;
+
 	return 0;
 }
 
@@ -303,13 +359,13 @@ file_block_walk(struct File *f, uint32_t filebno, uint32_t **ppdiskbno, bool all
 int
 file_map_block(struct File *f, uint32_t filebno, uint32_t *diskbno, bool alloc)
 {
-	
-
 	int r;
 	uint32_t *ptr;
 
-	// LAB 5: Your code here. 
-	panic("file_map_block not implemented");
+
+	if ( (r = file_block_walk(f, filebno, &ptr, alloc)) < 0)
+		return r;
+	*diskbno = *ptr;
 
 	return 0;
 }
@@ -342,9 +398,11 @@ file_get_block(struct File *f, uint32_t filebno, char **blk)
 
 	// Read in the block, leaving the pointer in *blk.
 	// Hint: Use file_map_block and read_block.
-	// LAB 5: Your code here.
-	panic("file_get_block not implemented");
-	
+	if ( (r = file_map_block(f, filebno, &diskbno, 1)) < 0)
+		return r;
+
+	if ( (r = read_block(diskbno, blk)) < 0)
+		return r;
 	return 0;
 }
 
@@ -358,8 +416,11 @@ file_dirty(struct File *f, off_t offset)
 	// Find the block and either write to dirty it or remap
 	// it with PTE_D set.
 	// Hint: Use file_get_block
-	// LAB 5: Your code here.
-	panic("file_dirty not implemented");
+	if ( (r = file_get_block(f, offset/BLKSIZE, &blk)))
+		return r;
+
+	// make it accessed and dirty
+	*(volatile char *)blk = blk[0];
 
 	return 0;
 }

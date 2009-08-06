@@ -69,10 +69,12 @@ fs_test(void)
 	assert(!(vpt[VPN(f)] & PTE_D));
 	if ((r = file_get_block(f, 0, &blk)) < 0)
 		panic("file_get_block 2: %e", r);
-	strcpy(blk, msg);	
+	strcpy(blk, msg);
 	assert((vpt[VPN(blk)] & PTE_D));
 	file_flush(f);
 	assert(!(vpt[VPN(blk)] & PTE_D));
+	file_dirty(f, 0);
+	assert((vpt[VPN(blk)] & PTE_D));
 	file_close(f);
 	assert(!(vpt[VPN(f)] & PTE_D));	
 	cprintf("file rewrite is good\n");

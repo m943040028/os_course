@@ -40,8 +40,22 @@ open(const char *path, int mode)
 	// Return the file descriptor index.
 	// If any step fails, use fd_close to free the file descriptor.
 
-	// LAB 5: Your code here.
-	panic("open() unimplemented!");
+	int r;
+
+	struct Fd *fd;
+	fd_alloc(&fd);
+
+	if ((r = fsipc_open(path, mode, fd)) < 0)
+		goto out_close_fd;
+	cprintf("file size = %d\n", fd->fd_file.file.f_size);
+	if ((r = fmap(fd, 0, fd->fd_file.file.f_size)) < 0)
+		goto out_close_fd;
+
+	return fd2num(fd);
+
+out_close_fd:
+	fd_close(fd, 0);
+	return r;
 }
 
 // Clean up a file-server file descriptor.
@@ -49,12 +63,18 @@ open(const char *path, int mode)
 static int
 file_close(struct Fd *fd)
 {
+	int r;
+
 	// Unmap any data mapped for the file,
 	// then tell the file server that we have closed the file
 	// (to free up its resources).
+	if ((r = funmap(fd, fd->fd_file.file.f_size, 0,
+			(fd->fd_omode & (O_RDWR | O_WRONLY)) ? 1 : 0)) < 0)
+		return r;
+	if ((r = fsipc_close(fd->fd_file.id)) < 0)
+		return r;
 
-	// LAB 5: Your code here.
-	panic("close() unimplemented!");
+	return r;
 }
 
 // Read 'n' bytes from 'fd' at the current seek position into 'buf'.
@@ -166,13 +186,25 @@ fmap(struct Fd* fd, off_t oldsize, off_t newsize)
 	size_t i;
 	char *va;
 	int r;
+	off_t orisize;
 
 	// Hint: Use fsipc_map.
 	// Hint: Remember to unmap any pages you mapped if 
 	// an error occurs.
+	newsize = ROUNDUP(newsize, PGSIZE);
+	oldsize = ROUNDUP(oldsize, PGSIZE);
+	orisize = oldsize;
 
-	// LAB 5: Your code here.
-	panic("fmap not implemented");
+	if (oldsize >= newsize)
+		return 0;
+
+	for (; oldsize < newsize; oldsize += PGSIZE)
+		if ((r = fsipc_map(fd->fd_file.id, oldsize, fd2data(fd) + oldsize)) < 0) {
+			funmap(fd, oldsize, orisize, 0);
+			return r;
+		}
+
+	return 0;
 }
 
 // Unmap any file pages that no longer represent valid file pages
@@ -182,16 +214,31 @@ static int
 funmap(struct Fd* fd, off_t oldsize, off_t newsize, bool dirty)
 {
 	size_t i;
-	char *va;
+	char *old_va, *new_va;
 	int r, ret;
+
+	newsize = ROUNDUP(newsize, PGSIZE);
+	oldsize = ROUNDDOWN(oldsize, PGSIZE);
+
+	if (newsize >= oldsize)
+		return 0;
+
+	old_va = fd2data(fd) + oldsize;
+	new_va = fd2data(fd) + newsize;
 
 	// For each page that needs to be unmapped, notify the server if
 	// the page is dirty and remove the page.
 	
 	// Hint: Use vpt to check if a page need to be unmapped.
-	
-	// LAB 5: Your code here.
-	panic("funmap not implemented");
+	for (; old_va >= (char *)new_va; old_va -= PGSIZE)
+		if ((vpd[PDX(old_va)] & PTE_P) || (vpt[VPN(old_va)] & PTE_P)) {
+			if (dirty)
+				if ((r = fsipc_dirty(fd->fd_file.id, old_va - fd2data(fd))) < 0)
+					return r;
+			if ((r = sys_page_unmap(0, old_va)) < 0)
+				return r;
+		}
+	return 0;
 }
 
 // Delete a file

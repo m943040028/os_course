@@ -1,6 +1,7 @@
 obj
-bochs.log
-bochs.out
+bochs.*
+cscope.*
 lab?-handin.tar.gz
 tags
 TAGS
+serial_server

@@ -116,6 +116,7 @@ debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
 	const struct Stab *stabs, *stab_end;
 	const char *stabstr, *stabstr_end;
 	int lfile, rfile, lfun, rfun, lline, rline;
+	int nargs;
 
 	// Initialize *info
 	info->eip_file = "<unknown>";
@@ -141,7 +142,9 @@ debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
 
 		// Make sure this memory is valid.
 		// Return -1 if it is not.  Hint: Call user_mem_check.
-		// LAB 3: Your code here.
+		if (user_mem_check(curenv, usd,
+			sizeof(struct UserStabData), PTE_P|PTE_U))
+			return -1;
 		
 		stabs = usd->stabs;
 		stab_end = usd->stab_end;
@@ -149,7 +152,13 @@ debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
 		stabstr_end = usd->stabstr_end;
 
 		// Make sure the STABS and string table memory is valid.
-		// LAB 3: Your code here.
+		if (user_mem_check(curenv, stabs,
+			stab_end - stabs, PTE_P|PTE_U))
+			return -1;
+
+		if (user_mem_check(curenv, stabstr,
+			stabstr_end - stabstr, PTE_P|PTE_U))
+			return -1;
 	}
 
 	// String table validity checks
@@ -204,8 +213,14 @@ debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
 	//	Look at the STABS documentation and <inc/stab.h> to find
 	//	which one.
 	// Your code here.
-
+	stab_binsearch(stabs, &lline, &rline, N_SLINE, addr);
 	
+	if (lline <= rline) 
+		// stabs[lline].n_desc records the line number in the file
+		info->eip_line = stabs[lline].n_desc;
+	else
+		return -1;
+
 	// Search backwards from the line number for the relevant filename
 	// stab.
 	// We can't just use the "lfile" stab because inlined functions
@@ -221,11 +236,39 @@ debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
 
 	// Set eip_fn_narg to the number of arguments taken by the function,
 	// or 0 if there was no containing function.
-	if (lfun < rfun)
-		for (lline = lfun + 1;
-		     lline < rfun && stabs[lline].n_type == N_PSYM;
-		     lline++)
-			info->eip_fn_narg++;
+	// Your code here.
+	nargs = 0;
+	while (stabs[++lfun].n_type == N_PSYM) nargs++;
+	info->eip_fn_narg = nargs;
 	
 	return 0;
+}
+
+// custom debug staff
+static uint8_t kdebug_level = KDEBUG_FLOW;
+static uint32_t interesting_catelog = C_ENV;
+static uint8_t quiet;
+
+void inline
+k_debug_msg_off(void)
+{
+	quiet = 1;
+}
+
+void inline
+k_debug_msg_on(void)
+{
+	quiet = 0;
+}
+
+void inline
+k_debug(uint32_t catelog, uint8_t level, char* fmt, ...)
+{
+	va_list va;
+	va_start(va, fmt);
+
+	if (level <= kdebug_level && (interesting_catelog & catelog) && !quiet)
+		vcprintf(fmt, va);
+
+	va_end(va);
 }

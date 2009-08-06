@@ -425,8 +425,7 @@ debugger_log: -
 #   com3: enabled=1, mode=raw, dev=com1
 #   com3: enabled=1, mode=socket, dev=localhost:8888
 #=======================================================================
-#com1: enabled=1, mode=term, dev=/dev/ttyp9
-
+com1: enabled=1, mode=socket, dev=localhost:1234
 
 #=======================================================================
 # PARPORT1, PARPORT2:
