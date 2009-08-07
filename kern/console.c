@@ -531,7 +531,7 @@ cons_getc(void)
 void
 cons_putc(int c)
 {
-	lpt_putc(c);
+	//lpt_putc(c);
 	serial_putc(c);
 	//cga_putc(c);
 }
