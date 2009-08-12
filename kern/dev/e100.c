@@ -57,7 +57,7 @@ static void alloc_tx_ring(struct e100_private *data) {
 		}
 	}
 
-	*last_link = (uint32_t)page2kva(data->tx_ring[0]);
+	*last_link = (uint32_t)page2pa(data->tx_ring[0]);
 }
 
 static void tx_ring_walk(struct e100_private *data) {
