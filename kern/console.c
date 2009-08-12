@@ -125,6 +125,9 @@ lpt_putc(int c)
 static void
 serial_putc(int c)
 {
+	if (c == '\r')
+		serial_putc('\n');
+
 	if (serial_exists) {
 		while (!(inb(COM1+COM_LSR) & COM_LSR_TX));
 		outb(COM1+COM_TX, c);
@@ -531,7 +534,7 @@ cons_getc(void)
 void
 cons_putc(int c)
 {
-	//lpt_putc(c);
+	lpt_putc(c);
 	serial_putc(c);
 	//cga_putc(c);
 }

@@ -28,6 +28,7 @@ struct pci_driver pci_attach_class[] = {
 };
 
 struct pci_driver pci_attach_vendor[] = {
+    { 0x8086, 0x1209, e100_attach }, // Intel82559ER
     { 0, 0, 0 },
 };
 

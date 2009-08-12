@@ -157,11 +157,11 @@ trap_dispatch(struct Trapframe *tf)
 	}
 	
 	// Handle clock interrupts.
-	if (tf->tf_trapno == IRQ_OFFSET + IRQ_TIMER)
+	if (tf->tf_trapno == IRQ_OFFSET + IRQ_TIMER) {
+		// Add time tick increment to clock interrupts.
+		time_tick();
 		sched_yield();
-
-	// Add time tick increment to clock interrupts.
-	// LAB 6: Your code here.
+	}
 
 	// Handle spurious interupts
 	// The hardware sometimes raises these because of noise on the

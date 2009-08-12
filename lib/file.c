@@ -47,7 +47,7 @@ open(const char *path, int mode)
 
 	if ((r = fsipc_open(path, mode, fd)) < 0)
 		goto out_close_fd;
-	cprintf("file size = %d\n", fd->fd_file.file.f_size);
+
 	if ((r = fmap(fd, 0, fd->fd_file.file.f_size)) < 0)
 		goto out_close_fd;
 
