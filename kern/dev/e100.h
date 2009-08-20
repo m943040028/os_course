@@ -9,6 +9,8 @@
 #include <dev/pci.h>
 #include <dev/pcireg.h>
 
+struct Trapframe;
+
 enum {
 	CSR_SCB_STATUS			= 0x0,
 	CSR_SCB_CMD_WORD		= 0x2,
@@ -27,6 +29,10 @@ enum {
 } csr_reg_offset;
 
 enum {
+	CSR_SCB_STATUS_RU_STATE_SHIFT	= 2,
+	CSR_SCB_STATUS_RU_STATE_MASK	= 0x3,
+	CSR_SCB_STATUS_CU_STATE_SHIFT	= 6,
+	CSR_SCB_STATUS_CU_STATE_MASK	= 0xf,
 	CSR_SCB_STATUS_CX_TNO		= (1<<15),
 	CSR_SCB_STATUS_FR		= (1<<14),
 	CSR_SCB_STATUS_CNA		= (1<<13),
@@ -39,19 +45,42 @@ enum {
 } csr_scb_status_bits;
 
 enum {
-	CSR_SCB_CMD_RU			= (1<<16),
+	CU_STATE_IDEL			= 0x0,
+	CU_STATE_ACTIVE			= 0x1,
+	CU_STATE_LPQ_ACTIVE		= 0x2,
+	CU_STATE_HQP_ACTIVE		= 0x3,
+} cu_state;
+
+static char cu_state_to_string[][10] =
+{
+	"CU_IDLE",
+	"CU_ACTIVE",
+	"LPQ",
+	"HQP",
+};
+
+
+enum {
+	CSR_SCB_CMD_RU_SHIFT		= 0,
 	CSR_SCB_CMD_RU_MASK		= (0x7),
-	CSR_SCB_CMD_CU			= (1<<20),
+	CSR_SCB_CMD_CU_SHIFT		= 4,
 	CSR_SCB_CMD_CU_MASK		= (0xf),
-	CSR_SCB_CMD_M			= (1<<24),
-	CSR_SCB_CMD_SI			= (1<<25),
-	CSR_SCB_CMD_INT_FCP_DISABLE	= (1<<26),
-	CSR_SCB_CMD_INT_ER_DISABLE	= (1<<27),
-	CSR_SCB_CMD_INT_RNR_DISABLE	= (1<<28),
-	CSR_SCB_CMD_INT_CNA_DISABLE	= (1<<29),
-	CSR_SCB_CMD_INT_FR_DISABLE	= (1<<30),
-	CSR_SCB_CMD_INT_CX_DISABLE	= (1<<31),
+	CSR_SCB_CMD_M			= (1<<8),
+	CSR_SCB_CMD_SI			= (1<<9),
+	CSR_SCB_CMD_INT_FCP_DISABLE	= (1<<10),
+	CSR_SCB_CMD_INT_ER_DISABLE	= (1<<11),
+	CSR_SCB_CMD_INT_RNR_DISABLE	= (1<<12),
+	CSR_SCB_CMD_INT_CNA_DISABLE	= (1<<13),
+	CSR_SCB_CMD_INT_FR_DISABLE	= (1<<14),
+	CSR_SCB_CMD_INT_CX_DISABLE	= (1<<15),
 } csr_scb_command_bits;
+
+enum {
+	CSR_SCB_CMD_CU_NOOP		= (0x0<<CSR_SCB_CMD_CU_SHIFT),
+	CSR_SCB_CMD_CU_START		= (0x1<<CSR_SCB_CMD_CU_SHIFT),
+	CSR_SCB_CMD_CU_RESUME		= (0x2<<CSR_SCB_CMD_CU_SHIFT),
+	CSR_SCB_CMD_CU_LOAD_BASE	= (0x6<<CSR_SCB_CMD_CU_SHIFT),
+} csr_scb_cu_opcode;
 
 enum {
 	CSR_PORT_RESET			= 0x0,
@@ -103,21 +132,30 @@ enum {
 	CB_STATUS_U			= (1<<12), // Underrun
 } cb_status_bits;
 
-#define NR_CB_PER_PAGE		(PGSIZE / (sizeof(struct cb)))
-#define NR_TX_RING		16
-#define NR_RX_RING		16
-#define NR_TX_RING_PAGES	(16/NR_CB_PER_PAGE)
-#define NR_RX_RING_PAGES	(16/NR_CB_PER_PAGE)
+#define NR_TX_RING_PAGES	8
+#define NR_TX_CB		((NR_TX_RING_PAGES * PGSIZE) / (sizeof(struct cb)))
 
 // Prototypes
 int e100_attach(struct pci_func *pcif);
+void e100_int_handler(struct Trapframe *tf);
 
 struct e100_private {
 	uint16_t	io_base;
 	uint16_t	io_size;
 	uint8_t		irq;
-	struct Page	*tx_ring[NR_TX_RING_PAGES];
-	struct Page	*rx_ring[NR_RX_RING_PAGES];
+	uint8_t		cu_state;
+	struct Page	*tx_ring;
+	struct Page	*rx_ring;
+	struct cb	*cur_cb;
+	struct cb	*tail_cb;
+	uint8_t		cb_count;
 } __attribute__((packed));
+
+void inline e100_write32(struct e100_private *data, uint16_t addr, uint32_t val);
+void inline e100_write16(struct e100_private *data, uint16_t addr, uint8_t val);
+void inline e100_write8(struct e100_private *data, uint16_t addr, uint8_t val);
+uint32_t inline e100_read32(struct e100_private *data, uint16_t addr);
+uint16_t inline e100_read16(struct e100_private *data, uint16_t addr);
+uint8_t inline e100_read8(struct e100_private *data, uint16_t addr);
 
 #endif	// !JOS_DEV_E100_H

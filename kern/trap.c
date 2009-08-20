@@ -13,6 +13,8 @@
 #include <kern/picirq.h>
 #include <kern/time.h>
 
+#include <kern/dev/e100.h>
+
 static struct Taskstate ts;
 
 /* Interrupt descriptor table.  (Must be built at run time because
@@ -155,7 +157,15 @@ trap_dispatch(struct Trapframe *tf)
 				tf->tf_regs.reg_edi, tf->tf_regs.reg_esi);
 		return;
 	}
-	
+
+	// TODO: add a interrupt handler register framework
+	if (tf->tf_trapno == IRQ_OFFSET + 4)
+		return;
+	if (tf->tf_trapno == IRQ_OFFSET + 11) {
+		e100_int_handler(tf);
+		return;
+	}
+
 	// Handle clock interrupts.
 	if (tf->tf_trapno == IRQ_OFFSET + IRQ_TIMER) {
 		// Add time tick increment to clock interrupts.
