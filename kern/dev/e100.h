@@ -138,6 +138,9 @@ enum {
 // Prototypes
 int e100_attach(struct pci_func *pcif);
 void e100_int_handler(struct Trapframe *tf);
+void e100_tx(void *data_ptr, size_t len);
+
+LIST_HEAD(wait_queue_head, Env);
 
 struct e100_private {
 	uint16_t	io_base;
@@ -148,14 +151,8 @@ struct e100_private {
 	struct Page	*rx_ring;
 	struct cb	*cur_cb;
 	struct cb	*tail_cb;
-	uint8_t		cb_count;
+	int8_t		cb_count;
+	struct wait_queue_head wait_queue;
 } __attribute__((packed));
-
-void inline e100_write32(struct e100_private *data, uint16_t addr, uint32_t val);
-void inline e100_write16(struct e100_private *data, uint16_t addr, uint8_t val);
-void inline e100_write8(struct e100_private *data, uint16_t addr, uint8_t val);
-uint32_t inline e100_read32(struct e100_private *data, uint16_t addr);
-uint16_t inline e100_read16(struct e100_private *data, uint16_t addr);
-uint8_t inline e100_read8(struct e100_private *data, uint16_t addr);
 
 #endif	// !JOS_DEV_E100_H

@@ -41,6 +41,7 @@ static struct Command commands[] = {
 	{ "dumpva", "Dump virtual memory contents", mon_dumpva },
 	{ "dumppa", "Dump physical memory contents", mon_dumppa },
 	{ "buddyinfo", "Free memory information", mon_buddyinfo },
+	{ "ps", "Show all environments on the system", mon_ps },
 };
 #define NCOMMANDS (sizeof(commands)/sizeof(commands[0]))
 
@@ -113,13 +114,13 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 
 		strncpy(name, info.eip_fn_name, info.eip_fn_namelen);
 		name[info.eip_fn_namelen] = '\0';
-		cprintf("%s:%d: %s+%d\n", 
+		cprintf("\033[35m%s:%d: %s+%d\n\033[0m", 
 			info.eip_file,
 			info.eip_line,
 			name,
 			current_pc - info.eip_fn_addr
 			);
-		cprintf("ebp %08x eip %08x args %s", ebp, current_pc,
+		cprintf("  ebp %08x eip %08x args %s", ebp, current_pc,
 			info.eip_fn_narg ? "" : "(none)");
 		for (i = 0; i < info.eip_fn_narg; i++) 
 			cprintf("%08x ", *(ebp + 2 + i));
@@ -262,6 +263,12 @@ int mon_switch(int argc, char **argv, struct Trapframe *tf)
 	}
 	lcr3(env->env_cr3);
 	cprintf("Switched to environment: %x\n", env->env_id);
+	curenv = env;
+	return 0;
+}
+
+int mon_ps(int argc, char **argv, struct Trapframe *tf)
+{
 	return 0;
 }
 
@@ -315,6 +322,7 @@ monitor(struct Trapframe *tf)
 	char *buf;
 
 	cprintf("Welcome to the JOS kernel monitor!\n");
+	cprintf("Current environment is [%08x]\n\n", curenv->env_id);
 	cprintf("Type 'help' for a list of commands.\n");
 
 	if (tf != NULL)

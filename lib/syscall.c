@@ -118,8 +118,13 @@ sys_ipc_recv(void *dstva)
 }
 
 unsigned
-sys_time_msec()
+sys_time_msec(void)
 {
 	return (unsigned) syscall(SYS_time_msec, 0, 0, 0, 0, 0, 0);
 }
 
+int
+sys_frame_send(void *srcva, size_t len)
+{
+	return syscall(SYS_frame_send, 1, (uint32_t)srcva, (uint32_t)len, 0, 0, 0);
+}

@@ -28,7 +28,7 @@
 
 struct netif nif;
 
-#define debug 1
+#define debug 0
 
 struct timer_thread {
     uint32_t msec;
@@ -314,14 +314,19 @@ serve(void) {
 	uint32_t whom;
 	int perm;
 	void *va;
-	
+
 	while (1) {
 		perm = 0;
 		va = get_buffer();
 		req = ipc_recv((int32_t *) &whom, (void *) va, &perm);
+
 		if (debug) {
-			cprintf("ns req %d from %08x [page %08x: %s]\n",
-				req, whom, vpt[VPN(va)], va);
+			if (vpd[VPD(va)] & PTE_P)
+				cprintf("ns req %d from %08x [page %08x: %s]\n",
+					req, whom, vpt[VPN(va)], va);
+			else
+				cprintf("ns req %d from %08x\n",
+					req, whom);
 		}
 
 		// first take care of requests that do not contain an argument page

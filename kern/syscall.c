@@ -16,6 +16,9 @@
 #define KDEBUG
 #include <kern/kdebug.h>
 
+// TODO: device driver related, should be clean up (add up a framework)
+#include <kern/dev/e100.h>
+
 // Print a string to the system console.
 // The string is exactly 'len' characters long.
 // Destroys the environment on memory errors.
@@ -400,7 +403,7 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 		return -E_IPC_NOT_RECV;
 	// target environment is willing to receive
 	else {
-		DBG(C_ENV, KDEBUG_VERBOSE, "[%08x] sending value %x to %x\n",
+		DBG(C_ENV, KDEBUG_FLOW, "[%08x] sending value %x to %x\n",
 			curenv->env_id, value, dst_env->env_id);
 		dst_env->env_ipc_recving = 0;
 		dst_env->env_ipc_from = curenv->env_id;
@@ -411,7 +414,7 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 			struct Page *pp = pa2page(PTE_ADDR(*ppte));
 
 			dst_env->env_ipc_perm = perm;
-			DBG(C_ENV, KDEBUG_VERBOSE,
+			DBG(C_ENV, KDEBUG_FLOW,
 				"[%08x] insert page @ %08x(phys %08x) to [%08x] %08x\n",
 				curenv->env_id, srcva, PTE_ADDR(*ppte), dst_env->env_id,
 				dst_env->env_ipc_dstva);
@@ -461,10 +464,35 @@ sys_ipc_recv(void *dstva)
 }
 
 static int
-sys_time_msec() {
+sys_time_msec(void) {
 	return (int) time_msec();
 }
 
+static int
+sys_frame_send(void *srcva, size_t len) {
+	pte_t *ppte = 0;
+	struct Page *pp;
+	int offset = srcva - ROUNDDOWN(srcva, PGSIZE);
+
+	if (!srcva)
+		return -E_INVAL;
+
+	if ((uintptr_t)srcva >= UTOP)
+		return -E_INVAL;
+
+	// Max ethernet frame size is 1536 bytes
+	if (len > 1536)
+		return -E_INVAL;
+
+	if ( !(pp = page_lookup(curenv->env_pgdir, srcva, &ppte))
+		&& !(*ppte & PTE_P))
+		return -E_INVAL;
+
+	// may block
+	e100_tx(page2kva(pp) + offset, len);
+
+	return 0;
+}
 
 // Dispatches to the correct kernel function, passing the arguments.
 int32_t
@@ -507,6 +535,8 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		return sys_ipc_recv((void *)a1);
 	case SYS_time_msec:
 		return sys_time_msec();
+	case SYS_frame_send:
+		return sys_frame_send((void *)a1, (size_t)a2);
 	default:
 		return -E_INVAL;
 	}

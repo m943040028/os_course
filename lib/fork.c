@@ -28,7 +28,8 @@ pgfault(struct UTrapframe *utf)
 	pte = vpt[VPN(addr)];
 
 	if ( !(pte & PTE_COW))
-		panic("write access to non copy-on-write page\n");
+		panic("%s access to non copy-on-write page\n",
+			(err & FEC_WR) ? "write" : "read");
 
 	// Allocate a new page, map it at a temporary location (PFTEMP),
 	// copy the data from the old page to the new page, then move the new
@@ -117,6 +118,7 @@ fork(void)
 {
 	envid_t child;
 	extern unsigned char end[];
+	extern unsigned char __STABSTR_END__[];
 	uint8_t *addr;
 	int r;
 
@@ -146,6 +148,11 @@ fork(void)
 
 	// We are parent, dup our address space to child's using COW
 	for (addr = (uint8_t *)UTEXT; addr < end; addr += PGSIZE)
+		duppage(child, PPN(addr));
+
+	// Also dup the stabs and stabstr region
+	for (addr = (uint8_t *)USTABDATA; addr < __STABSTR_END__;
+		addr += PGSIZE)
 		duppage(child, PPN(addr));
 
 	// Share user stack by two environment is nonsense,

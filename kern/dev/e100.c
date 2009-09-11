@@ -3,43 +3,67 @@
 #include <inc/string.h>
 #include <kern/trap.h>
 #include <kern/picirq.h>
+#include <kern/env.h>
+#include <kern/sched.h>
+#include <inc/queue.h>
+
+void inline e100_write32(uint16_t addr, uint32_t val);
+void inline e100_write16(uint16_t addr, uint16_t val);
+void inline e100_write8(uint16_t addr, uint8_t val);
+uint32_t inline e100_read32(uint16_t addr);
+uint16_t inline e100_read16(uint16_t addr);
+uint8_t inline e100_read8(uint16_t addr);
+
+static struct e100_private e100_private;
+
+void e100_int_tx_finish(void)
+{
+	struct e100_private *data = &e100_private;
+	struct cb **tail_cb = &data->tail_cb;
+	struct Env *ep;
+
+	while ((*tail_cb)->cmd == (CB_CMD_TX|CB_CMD_I) && 
+		(*tail_cb)->status & CB_STATUS_OK) {
+		cprintf("TX completed\n");
+		// This command is finished, mark it free
+		(*tail_cb)->cmd = CB_CMD_NOP|CB_CMD_S|CB_CMD_EL;
+
+		data->cb_count--;
+		*tail_cb = KADDR((*tail_cb)->link);
+	}
+
+	assert(data->cb_count >= 0);
+
+	// wake up the environment(s) that waiting for
+	// TX ring space(s).
+	if (!LIST_EMPTY(&data->wait_queue)) {
+		ep = LIST_FIRST(&data->wait_queue);
+		LIST_REMOVE(ep, env_link);
+		ep->env_status = ENV_RUNNABLE;
+	}
+}
 
 void e100_int_handler(struct Trapframe *tf)
 {
-	cprintf("int received\n");
-}
+	cprintf("%s\n", __func__);
+	uint16_t status = e100_read16(CSR_SCB_STATUS);
 
-static struct e100_private e100_private;
+	cprintf("status = %08x\n", status);
+	// Ack interrupt
+	e100_write16(CSR_SCB_STATUS, status);
+
+	if (status & CSR_SCB_STATUS_CX_TNO)
+		e100_int_tx_finish();
+}
 
 static void e100_reset(void) {
 	int i;
 
-	outl(e100_private.io_base + CSR_PORT, CSR_PORT_RESET);
+	e100_write32(CSR_PORT, CSR_PORT_RESET);
 	// wait for 10us, read port 0x84 take 1.25us
 	for (i = 0; i < 8; i++)
 		inb(0x84);
 }
-
-// After DMA ring is created
-// (1). The device driver tells the CU where to find the ring by sending the CU 
-//      the physical address of the first buffer in the ring.
-// (2). The CU examines the CB by accessing the buffer in main memory directly. 
-//      If the CB does not contain any commands, the CU goes into suspend mode 
-//      waiting to be reactivated.
-// (3). The CU caches the physical address of the CB it stopped at in a local 
-//      register. When restarted, the CU will use this cached physical address 
-//      to access the DMA ring. It is therefore critical that the links in the DMA
-//      ring are rarely (if at all) changed. 
-// (4). When the driver wants to transmit a packet, it places the packet into the
-//      next available buffer in the ring and restarts the 82559ER's CU.
-// (5). The CU reads the packet from main memory into an internal buffer.
-//      (using PCI bursts) Once the packet is in the card's buffer, it can transmit
-//      it over the wire.
-// (6). When the packet is sent, the CU can set the CB status bits to indicate success
-//      and mark the buffer in the ring as empty. The CU then follows the link pointer
-//      to the next buffer in the ring and repeats the above process until it encounters
-//      a buffer with the suspend bit set in the control entry of the CB.
-
 
 static void 
 alloc_tx_ring(struct e100_private *data) {
@@ -70,6 +94,8 @@ tx_ring_walk(struct e100_private *data) {
 	struct Page *pp = data->tx_ring;
 	struct cb *first = page2kva(pp), *curr = first;
 
+	cprintf("cur_cb is %08p, tail_cb is %08p\n", data->cur_cb, data->tail_cb);
+
 	do {
 		cprintf("CB is at %08p: [%c%c%c]\n", curr,
 			(curr->status & CB_STATUS_C) ? 'C' : 'c',
@@ -81,25 +107,27 @@ tx_ring_walk(struct e100_private *data) {
 }
 
 uint8_t inline
-e100_read_cu_state(struct e100_private *data) {
-	uint32_t status = e100_read32(data, CSR_SCB_STATUS);
+e100_read_cu_state(void) {
+	uint32_t status = e100_read32(CSR_SCB_STATUS);
 
 	return (status & CSR_SCB_STATUS_RU_STATE_MASK)
 		>> CSR_SCB_STATUS_RU_STATE_SHIFT;
 }
 
-// Return values:
-//   1: All CB is used, should block the requesting envronment.
-//   0: Operation successed.
-int
-e100_tx(struct e100_private *data, void *data_ptr, size_t len) {
+void
+e100_tx(void *data_ptr, size_t len) {
+	struct e100_private *data = &e100_private;
 	struct cb **cur_cb = &data->cur_cb;
 
 	// All CB is filled, block the environment
-	if (data->cb_count == NR_TX_CB)
-		return 1;
+	if (data->cb_count == NR_TX_CB) {
+		curenv->env_status = ENV_NOT_RUNNABLE;
+		LIST_INSERT_HEAD(&data->wait_queue, curenv,
+				env_link);
+		sched_yield();
+	}
 
-	(*cur_cb)->cmd = CB_CMD_TX;
+	(*cur_cb)->cmd = CB_CMD_TX|CB_CMD_I;
 	(*cur_cb)->status = 0;
 	// use simplified mode
 	(*cur_cb)->tx_packet.tbd_array_addr = 0xffffffff;
@@ -110,13 +138,13 @@ e100_tx(struct e100_private *data, void *data_ptr, size_t len) {
 	(*cur_cb)->tx_packet.tx_threshold = 0x40;
 	(*cur_cb)->tx_packet.tbd_number = 0;
 	memmove((*cur_cb)->tx_packet.data, data_ptr, len);
+	data->cb_count++;
 
 	*cur_cb = KADDR((*cur_cb)->link);
 	
 	//start CU
-	if (e100_read_cu_state(data) != CU_STATE_ACTIVE)
-		e100_write16(data, CSR_SCB_CMD_WORD, CSR_SCB_CMD_CU_START);
-	return 0;
+	if (e100_read_cu_state() != CU_STATE_ACTIVE)
+		e100_write16(CSR_SCB_CMD_WORD, CSR_SCB_CMD_CU_START);
 }
 
 // PCI attach function
@@ -133,65 +161,88 @@ int e100_attach(struct pci_func *pcif)
 	data->io_size = (uint16_t) pcif->reg_size[1];
 	data->irq = pcif->irq_line;
 
+	LIST_INIT(&data->wait_queue);
+
 	e100_reset();
 	alloc_tx_ring(data);
 
+
+	// After DMA ring is created
+	// (1). The device driver tells the CU where to find the ring by sending
+	//	the CU the physical address of the first buffer in the ring.
+	// (2). The CU examines the CB by accessing the buffer in main memory directly. 
+	//      If the CB does not contain any commands, the CU goes into suspend mode 
+	//      waiting to be reactivated.
+	// (3). The CU caches the physical address of the CB it stopped at in a local 
+	//      register. When restarted, the CU will use this cached physical address 
+	//      to access the DMA ring. It is therefore critical that the links in the
+	//      DMA ring are rarely (if at all) changed. 
+	// (4). When the driver wants to transmit a packet, it places the packet into 
+	//      the next available buffer in the ring and restarts the 82559ER's CU.
+	// (5). The CU reads the packet from main memory into an internal buffer.
+	//      (using PCI bursts) Once the packet is in the card's buffer, it can
+	//      transmit it over the wire.
+	// (6). When the packet is sent, the CU can set the CB status bits to indicate
+	//      success and mark the buffer in the ring as empty. The CU then follows
+	//      the link pointer to the next buffer in the ring and repeats the above 
+	//      process until it encounters a buffer with the suspend bit set in the
+	//      control entry of the CB.
+
+
 	//load CU base
-	e100_write32(data, CSR_SCB_GENERAL_PTR, 0x0);
-	e100_write16(data, CSR_SCB_CMD_WORD, CSR_SCB_CMD_CU_LOAD_BASE);
+	e100_write32(CSR_SCB_GENERAL_PTR, 0x0);
+	e100_write16(CSR_SCB_CMD_WORD, CSR_SCB_CMD_CU_LOAD_BASE);
 
 	//load CU offset
-	e100_write32(data, CSR_SCB_GENERAL_PTR, page2pa(data->tx_ring));
+	e100_write32(CSR_SCB_GENERAL_PTR, page2pa(data->tx_ring));
+
+	//Enable CNA interrupt only
+	e100_write16(CSR_SCB_CMD_WORD,
+			CSR_SCB_CMD_INT_FCP_DISABLE |
+			CSR_SCB_CMD_INT_ER_DISABLE |
+			CSR_SCB_CMD_INT_RNR_DISABLE |
+			CSR_SCB_CMD_INT_FR_DISABLE |
+			CSR_SCB_CMD_INT_CX_DISABLE);
 
 	//enable interrupt
 	irq_setmask_8259A(irq_mask_8259A & ~(1 << data->irq));
-
-	//enalbe CNA interrupt
-	//e100_write32(data, CSR_SCB_CMD_WORD,
-	//~CSR_SCB_CMD_INT_CNA_DISABLE & e100_read32(data, CSR_SCB_CMD_WORD));
-
-	e100_tx(data, "test", sizeof("test"));
-	e100_tx(data, "test", sizeof("test"));
-	e100_tx(data, "test", sizeof("test"));
-
-	tx_ring_walk(data);
 
 	return 0;
 }
 
 // Wrapper routines
 void inline
-e100_write32(struct e100_private *data, uint16_t addr, uint32_t val)
+e100_write32(uint16_t addr, uint32_t val)
 {
-	outl(data->io_base + addr, val);
+	outl(e100_private.io_base + addr, val);
 }
 
 void inline
-e100_write16(struct e100_private *data, uint16_t addr, uint8_t val)
+e100_write16(uint16_t addr, uint16_t val)
 {
-	outw(data->io_base + addr, val);
+	outw(e100_private.io_base + addr, val);
 }
 
 void inline
-e100_write8(struct e100_private *data, uint16_t addr, uint8_t val)
+e100_write8(uint16_t addr, uint8_t val)
 {
-	outb(data->io_base + addr, val);
+	outb(e100_private.io_base + addr, val);
 }
 
 uint32_t inline
-e100_read32(struct e100_private *data, uint16_t addr)
+e100_read32(uint16_t addr)
 {
-	return inl(data->io_base + addr);
+	return inl(e100_private.io_base + addr);
 }
 
 uint16_t inline
-e100_read16(struct e100_private *data, uint16_t addr)
+e100_read16(uint16_t addr)
 {
-	return inw(data->io_base + addr);
+	return inw(e100_private.io_base + addr);
 }
 
 uint8_t inline
-e100_read8(struct e100_private *data, uint16_t addr)
+e100_read8(uint16_t addr)
 {
-	return inb(data->io_base + addr);
+	return inb(e100_private.io_base + addr);
 }
