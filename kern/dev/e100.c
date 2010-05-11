@@ -157,7 +157,7 @@ alloc_dma_ring(struct e100_private *data) {
 		
 	};
 
-	// cyclic link the ring buffer
+	// cyclic the ring buffer
 	tx_cb--;
 	tx_cb->link = (uint32_t)page2pa(data->tx_ring);
 	rx_cb--;
