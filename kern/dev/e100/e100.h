@@ -171,13 +171,9 @@ enum cb_status_bits {
 #define NR_RX_RING_PAGES	NR_TX_RING_PAGES
 #define NR_RX_CB		NR_TX_CB
 
-// Prototypes
-int e100_attach(struct pci_func *pcif);
-void e100_int_handler(struct Trapframe *tf);
-void e100_tx(void *data_ptr, size_t len);
-
 LIST_HEAD(wait_queue_head, Env);
 
+typedef struct e100_private e100_t;
 struct e100_private {
 	uint16_t	io_base;
 	uint16_t	io_size;
@@ -191,7 +187,22 @@ struct e100_private {
 	struct cb	*cur_rx_cb;
 	struct cb	*tail_rx_cb;
 	int8_t		rx_cb_count;
-	struct wait_queue_head wait_queue;
+	struct wait_queue_head tx_wait_queue;
+	struct wait_queue_head rx_wait_queue;
+
+	void 		(*write32)(e100_t *, uint32_t, uint32_t);
+	void 		(*write16)(e100_t *, uint32_t, uint16_t);
+	void 		(*write8)(e100_t *, uint32_t, uint8_t);
+	uint32_t 	(*read32)(e100_t *, uint32_t);
+	uint16_t 	(*read16)(e100_t *, uint32_t);
+	uint8_t 	(*read8)(e100_t *, uint32_t);
 } __attribute__((packed));
+
+// Prototypes
+int e100_attach(struct pci_func *pcif);
+void e100_int_handler(struct Trapframe *tf);
+int e100_tx(void *data_ptr, size_t len);
+int e100_rx(void *data_ptr, size_t *len);
+void e100_set_io_callbacks(e100_t *);
 
 #endif	// !JOS_DEV_E100_H

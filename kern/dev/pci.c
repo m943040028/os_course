@@ -3,7 +3,7 @@
 #include <inc/string.h>
 #include <dev/pci.h>
 #include <dev/pcireg.h>
-#include <dev/e100.h>
+#include <dev/e100/e100.h>
 
 // Flag to do "lspci" at bootup
 static int pci_show_devs = 1;

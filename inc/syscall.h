@@ -20,6 +20,7 @@ enum
 	SYS_ipc_recv,
 	SYS_time_msec,
 	SYS_frame_send,
+	SYS_frame_recv,
 	NSYSCALLS
 };
 

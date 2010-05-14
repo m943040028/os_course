@@ -13,7 +13,7 @@
 #include <kern/picirq.h>
 #include <kern/time.h>
 
-#include <kern/dev/e100.h>
+#include <kern/dev/e100/e100.h>
 
 static struct Taskstate ts;
 

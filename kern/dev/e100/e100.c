@@ -1,5 +1,4 @@
 // LAB 6: Your driver code here
-#include <dev/e100.h>
 #include <inc/string.h>
 #include <kern/trap.h>
 #include <kern/picirq.h>
@@ -7,50 +6,23 @@
 #include <kern/sched.h>
 #include <inc/queue.h>
 
-static struct e100_private e100_private;
+#include "e100.h"
+static e100_t e100;
 
-// Wrapper routines
-void inline
-e100_write32(uint16_t addr, uint32_t val)
+void wakeup_one_env(struct wait_queue_head *wait_queue)
 {
-	outl(e100_private.io_base + addr, val);
-}
-
-void inline
-e100_write16(uint16_t addr, uint16_t val)
-{
-	outw(e100_private.io_base + addr, val);
-}
-
-void inline
-e100_write8(uint16_t addr, uint8_t val)
-{
-	outb(e100_private.io_base + addr, val);
-}
-
-uint32_t inline
-e100_read32(uint16_t addr)
-{
-	return inl(e100_private.io_base + addr);
-}
-
-uint16_t inline
-e100_read16(uint16_t addr)
-{
-	return inw(e100_private.io_base + addr);
-}
-
-uint8_t inline
-e100_read8(uint16_t addr)
-{
-	return inb(e100_private.io_base + addr);
+	struct Env *ep;
+	if (!LIST_EMPTY(wait_queue)) {
+		ep = LIST_FIRST(wait_queue);
+		LIST_REMOVE(ep, env_link);
+		ep->env_status = ENV_RUNNABLE;
+	}
 }
 
 void e100_int_tx_finish(void)
 {
-	struct e100_private *data = &e100_private;
-	struct cb **tail_cb = &data->tail_tx_cb;
-	struct Env *ep;
+	e100_t *dev = &e100;
+	struct cb **tail_cb = &dev->tail_tx_cb;
 	cprintf("%s\n", __func__);
 
 	while ((*tail_cb)->cmd == (CB_CMD_TX|CB_CMD_I) && 
@@ -59,25 +31,21 @@ void e100_int_tx_finish(void)
 		// This command is finished, mark it free
 		(*tail_cb)->cmd = CB_CMD_NOP|CB_CMD_S|CB_CMD_EL;
 
-		data->tx_cb_count--;
+		dev->tx_cb_count--;
 		*tail_cb = KADDR((*tail_cb)->link);
 	}
 
-	assert(data->tx_cb_count >= 0);
+	assert(dev->tx_cb_count >= 0);
 
 	// wake up the environment(s) that waiting for
-	// TX ring space(s).
-	if (!LIST_EMPTY(&data->wait_queue)) {
-		ep = LIST_FIRST(&data->wait_queue);
-		LIST_REMOVE(ep, env_link);
-		ep->env_status = ENV_RUNNABLE;
-	}
+	// RX ring space(s).
+	wakeup_one_env(&dev->tx_wait_queue);
 }
 
 void e100_int_rx_finish(void)
 {
-	struct e100_private *data = &e100_private;
-	struct cb **tail_cb = &data->tail_rx_cb;
+	e100_t *dev = &e100;
+	struct cb **tail_cb = &dev->tail_rx_cb;
 	cprintf("%s\n", __func__);
 
 	while ( ((*tail_cb)->status & (CB_STATUS_C|CB_STATUS_OK))
@@ -89,26 +57,24 @@ void e100_int_rx_finish(void)
 		cprintf("actual_size = %d, size = %d\n",
 			(*tail_cb)->rx_packet.actual_count & CB_COUNT_MASK,
 			(*tail_cb)->rx_packet.size & CB_COUNT_MASK);
-		data->rx_cb_count++;
+		dev->rx_cb_count++;
 
 		*tail_cb = KADDR((*tail_cb)->link);
 	}
 
 	// notify the environment who is waiting for packet
 	// to receive
-
-	// after data has trnasfered, EOF and F flags should be
-	// cleared to indicated this RFD is free to use by device
+	wakeup_one_env(&dev->rx_wait_queue);
 }
 
 void e100_int_handler(struct Trapframe *tf)
 {
 	cprintf("%s\n", __func__);
-	uint16_t status = e100_read16(CSR_SCB_STATUS);
+	uint16_t status = e100.read16(&e100, CSR_SCB_STATUS);
 
 	cprintf("status = %08x\n", status);
 	// Ack interrupt
-	e100_write16(CSR_SCB_STATUS, status);
+	e100.write16(&e100, CSR_SCB_STATUS, status);
 
 	if (status & CSR_SCB_STATUS_CX_TNO)
 		e100_int_tx_finish();
@@ -120,14 +86,14 @@ void e100_int_handler(struct Trapframe *tf)
 static void e100_reset(void) {
 	int i;
 
-	e100_write32(CSR_PORT, CSR_PORT_RESET);
+	e100.write32(&e100, CSR_PORT, CSR_PORT_RESET);
 	// wait for 10us, read port 0x84 take 1.25us
 	for (i = 0; i < 8; i++)
-		inb(0x84);
+		e100.read8(&e100, 0x84);
 }
 
 static void 
-alloc_dma_ring(struct e100_private *data) {
+alloc_dma_ring(e100_t *dev) {
 	int i;
 
 	struct Page *tx_pp, *rx_pp;
@@ -136,8 +102,8 @@ alloc_dma_ring(struct e100_private *data) {
 		panic("Cannot allocate tx ring\n");
 	if (pages_alloc(&rx_pp, get_order(NR_RX_RING_PAGES * PGSIZE)) < 0)
 		panic("Cannot allocate rx ring\n");
-	data->tx_ring = tx_pp;
-	data->rx_ring = rx_pp;
+	dev->tx_ring = tx_pp;
+	dev->rx_ring = rx_pp;
 	for (i = 0, tx_cb = (struct cb *)page2kva(tx_pp),
 		rx_cb = (struct cb *)page2kva(rx_pp);
 		i < NR_TX_CB; i++, tx_cb++, rx_cb++)
@@ -158,24 +124,22 @@ alloc_dma_ring(struct e100_private *data) {
 	};
 
 	// cyclic the ring buffer
-	tx_cb--;
-	tx_cb->link = (uint32_t)page2pa(data->tx_ring);
-	rx_cb--;
-	rx_cb->link = (uint32_t)page2pa(data->rx_ring);
+	(tx_cb-1)->link = (uint32_t)page2pa(dev->tx_ring);
+	(rx_cb-1)->link = (uint32_t)page2pa(dev->rx_ring);
 
 	// tail points to the first cb, to construct initial state
-	data->tail_tx_cb = data->cur_tx_cb = (struct cb *)KADDR(tx_cb->link);
-	data->tail_rx_cb = data->cur_rx_cb = (struct cb *)KADDR(rx_cb->link);
-	data->tx_cb_count = 0;
-	data->rx_cb_count = 0;
+	dev->tail_tx_cb = dev->cur_tx_cb = page2kva(dev->tx_ring);
+	dev->tail_rx_cb = dev->cur_rx_cb = page2kva(dev->rx_ring);
+	dev->tx_cb_count = 0;
+	dev->rx_cb_count = 0;
 }
 
 static void
-tx_ring_walk(struct e100_private *data) {
-	struct Page *pp = data->tx_ring;
+tx_ring_walk(e100_t *dev) {
+	struct Page *pp = dev->tx_ring;
 	struct cb *first = page2kva(pp), *curr = first;
 
-	cprintf("cur_cb is %08p, tail_cb is %08p\n", data->cur_tx_cb, data->tail_tx_cb);
+	cprintf("cur_cb is %08p, tail_cb is %08p\n", dev->cur_tx_cb, dev->tail_tx_cb);
 
 	do {
 		cprintf("CB is at %08p: [%c%c%c]\n", curr,
@@ -189,97 +153,130 @@ tx_ring_walk(struct e100_private *data) {
 
 uint8_t inline
 e100_read_cu_state(void) {
-	uint32_t status = e100_read32(CSR_SCB_STATUS);
+	uint32_t status = e100.read32(&e100, CSR_SCB_STATUS);
 
 	return (status & CSR_SCB_STATUS_RU_STATE_MASK)
 		>> CSR_SCB_STATUS_RU_STATE_SHIFT;
 }
 
-void
+int
 e100_tx(void *data_ptr, size_t len) {
-	struct e100_private *data = &e100_private;
-	struct cb **cur_cb = &data->cur_tx_cb;
+	e100_t *dev = &e100;
+	struct cb *cur_cb = dev->cur_tx_cb;
 
 	// All CB is filled, block the environment
-	if (data->tx_cb_count == NR_TX_CB) {
+	if (dev->tx_cb_count == NR_TX_CB) {
 		curenv->env_status = ENV_NOT_RUNNABLE;
-		LIST_INSERT_HEAD(&data->wait_queue, curenv,
+		LIST_INSERT_HEAD(&dev->tx_wait_queue, curenv,
 				env_link);
 		sched_yield();
 	}
 
-	(*cur_cb)->cmd = CB_CMD_TX|CB_CMD_I;
-	(*cur_cb)->status = 0;
+	cur_cb->cmd = CB_CMD_TX|CB_CMD_I;
+	cur_cb->status = 0;
 	// use simplified mode
-	(*cur_cb)->tx_packet.tbd_array_addr = 0xffffffff;
-	(*cur_cb)->tx_packet.byte_count = len;
+	cur_cb->tx_packet.tbd_array_addr = 0xffffffff;
+	cur_cb->tx_packet.byte_count = len;
 	// data should be accumulaed in the internal buffer
 	// before being transmitted
 	// this value is granularity of 8bytes
-	(*cur_cb)->tx_packet.tx_threshold = 0x40;
-	(*cur_cb)->tx_packet.tbd_number = 0;
-	memmove((*cur_cb)->tx_packet.data, data_ptr, len);
-	data->tx_cb_count++;
+	cur_cb->tx_packet.tx_threshold = 0x40;
+	cur_cb->tx_packet.tbd_number = 0;
+	memmove(cur_cb->tx_packet.data, data_ptr, len);
+	dev->tx_cb_count++;
 	
 	//start CU
 	if (e100_read_cu_state() != CU_STATE_ACTIVE) {
 		// before trigger cu, we should load h/w offset into 
 		// pointer register
-		e100_write32(CSR_SCB_GENERAL_PTR, PADDR(*cur_cb));
-		e100_write16(CSR_SCB_CMD_WORD, CSR_SCB_CMD_CU_START);
+		e100.write32(&e100, CSR_SCB_GENERAL_PTR, PADDR(cur_cb));
+		e100.write16(&e100, CSR_SCB_CMD_WORD, CSR_SCB_CMD_CU_START);
 	}
 
-	*cur_cb = KADDR((*cur_cb)->link);
+	dev->cur_tx_cb = KADDR(cur_cb->link);
+	return 0;
+}
+
+int
+e100_rx(void *data_ptr, size_t *len)
+{
+	e100_t *dev = &e100;
+	struct cb *cur_cb = dev->cur_rx_cb;
+
+	// no packet received, block the caller
+	if (dev->rx_cb_count == 0) {
+		curenv->env_status = ENV_NOT_RUNNABLE;
+		LIST_INSERT_HEAD(&dev->rx_wait_queue, curenv,
+				env_link);
+		cprintf("[%08x] waiting for input\n", curenv->env_id);
+		sched_yield();
+	}
+	cprintf("[%08x] waked\n", curenv->env_id);
+
+	// OK, pick a packet
+	memmove(data_ptr, cur_cb->rx_packet.data, cur_cb->rx_packet.size);
+	*len = cur_cb->rx_packet.size;
+
+	// after dev has trnasfered, EOF and F flags should be
+	// cleared to indicated this RFD is free to use by device
+	cur_cb->cmd = CB_CMD_NOP|CB_CMD_S|CB_CMD_EL;	
+
+	dev->rx_cb_count--;
+	dev->cur_rx_cb = KADDR(cur_cb->link);
+
+	return 0;
 }
 
 // PCI attach function
 int e100_attach(struct pci_func *pcif)
 {
-	struct e100_private *data = &e100_private;
+	e100_t *dev = &e100;
 	cprintf("%s called\n", __func__);
 	pci_func_enable(pcif);
 
 	// BAR[1] is i/o address
 	// TODO: the pci_func structure should add a bit
 	// to distinguish between i/o address and mmio address
-	data->io_base = (uint16_t) pcif->reg_base[1];
-	data->io_size = (uint16_t) pcif->reg_size[1];
-	data->irq = pcif->irq_line;
+	dev->io_base = (uint16_t) pcif->reg_base[1];
+	dev->io_size = (uint16_t) pcif->reg_size[1];
+	dev->irq = pcif->irq_line;
 
-	LIST_INIT(&data->wait_queue);
+	LIST_INIT(&dev->tx_wait_queue);
+	LIST_INIT(&dev->rx_wait_queue);
+	e100_set_io_callbacks(dev);
 
 	e100_reset();
-	alloc_dma_ring(data);
+	alloc_dma_ring(dev);
 
 	//load RU base
-	e100_write32(CSR_SCB_GENERAL_PTR, 0x0);
-	e100_write16(CSR_SCB_CMD_WORD, CSR_SCB_CMD_RU_LOAD_BASE);
+	e100.write32(&e100, CSR_SCB_GENERAL_PTR, 0x0);
+	e100.write16(&e100, CSR_SCB_CMD_WORD, CSR_SCB_CMD_RU_LOAD_BASE);
 
 	//load RU offset 
-	e100_write32(CSR_SCB_GENERAL_PTR, page2pa(data->rx_ring));
+	e100.write32(&e100, CSR_SCB_GENERAL_PTR, page2pa(dev->rx_ring));
 
 	//trigger RU
-	e100_write16(CSR_SCB_CMD_WORD, CSR_SCB_CMD_RU_START);
+	e100.write16(&e100, CSR_SCB_CMD_WORD, CSR_SCB_CMD_RU_START);
 
 	//load CU base
-	e100_write32(CSR_SCB_GENERAL_PTR, 0x0);
-	e100_write16(CSR_SCB_CMD_WORD, CSR_SCB_CMD_CU_LOAD_BASE);
+	e100.write32(&e100, CSR_SCB_GENERAL_PTR, 0x0);
+	e100.write16(&e100, CSR_SCB_CMD_WORD, CSR_SCB_CMD_CU_LOAD_BASE);
 
 	//load CU offset
-	e100_write32(CSR_SCB_GENERAL_PTR, page2pa(data->tx_ring));
+	e100.write32(&e100, CSR_SCB_GENERAL_PTR, page2pa(dev->tx_ring));
 
 	//trigger CU
-	e100_write16(CSR_SCB_CMD_WORD, CSR_SCB_CMD_CU_START);
+	e100.write16(&e100, CSR_SCB_CMD_WORD, CSR_SCB_CMD_CU_START);
 
 	//Enable CX interrupt and FR interrupt
-	e100_write16(CSR_SCB_CMD_WORD,
+	e100.write16(&e100, CSR_SCB_CMD_WORD,
 			CSR_SCB_CMD_INT_FCP_DISABLE |
 			CSR_SCB_CMD_INT_ER_DISABLE |
 			CSR_SCB_CMD_INT_RNR_DISABLE |
 			CSR_SCB_CMD_INT_CNA_DISABLE);
 
 	//enable interrupt
-	irq_setmask_8259A(irq_mask_8259A & ~(1 << data->irq));
+	irq_setmask_8259A(irq_mask_8259A & ~(1 << dev->irq));
 
 	return 0;
 }

@@ -56,6 +56,7 @@ int	sys_ipc_try_send(envid_t to_env, uint32_t value, void *pg, int perm);
 int	sys_ipc_recv(void *rcv_pg);
 unsigned sys_time_msec();
 int	sys_frame_send(void *srcva, size_t len);
+int	sys_frame_recv(void *dstva);
 
 // This must be inlined.  Exercise for reader: why?
 static __inline envid_t sys_exofork(void) __attribute__((always_inline));

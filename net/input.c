@@ -2,12 +2,22 @@
 
 void
 input(envid_t ns_envid) {
-	int req;
+	int ret;
 
 	binaryname = "ns_input";
 
 	// LAB 6: Your code here:
 	// 	- read a packet from the device driver
 	//	- send it to the network server
-	while (1);
+        struct jif_pkt *ppkt;
+
+	while (1) {
+		extern uint8_t nsipcbuf[PGSIZE];
+		ppkt = (struct jif_pkt *) nsipcbuf;
+		if ( (ppkt->jp_len = sys_frame_recv(ppkt->jp_data)) < 0)
+			panic("sys_frame_send() failed: %e\n", ppkt->jp_len);
+
+		cprintf("%s: read a packet: size=%d\n", binaryname, ppkt->jp_len);
+		ipc_send(ns_envid, NSREQ_INPUT, ppkt, PTE_P|PTE_W|PTE_U);
+	}
 }

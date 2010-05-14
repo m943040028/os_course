@@ -17,12 +17,13 @@ output(envid_t ns_envid) {
 	struct jif_pkt *ppkt;
 
 	while (1) {
-		req = ipc_recv((int32_t *) &whom, (void *) REQVA, &perm);
+		extern uint8_t nsipcbuf[PGSIZE];
+		req = ipc_recv((int32_t *) &whom, (void *) nsipcbuf, &perm);
 		if (req < 0)
 			panic("ipc_recv() failed: %e\n", req);
 		cprintf(DIAG "Read message responsible for request %08x\n", req);
 
-		ppkt = (struct jif_pkt *) REQVA;
+		ppkt = (struct jif_pkt *) nsipcbuf;
 		if ( (r = sys_frame_send(ppkt->jp_data, ppkt->jp_len)) < 0)
 			panic("sys_frame_send() failed: %e\n", r);
 	}

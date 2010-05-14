@@ -29,7 +29,8 @@ KERN_SRCFILES :=	kern/entry.S \
 			kern/kdebug.c \
 			kern/time.c \
 			kern/dev/pci.c \
-			kern/dev/e100.c \
+			kern/dev/e100/e100.c \
+			kern/dev/e100/util.c \
 			lib/printfmt.c \
 			lib/readline.c \
 			lib/string.c

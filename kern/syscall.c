@@ -17,7 +17,7 @@
 #include <kern/kdebug.h>
 
 // TODO: device driver related, should be clean up (add up a framework)
-#include <kern/dev/e100.h>
+#include <kern/dev/e100/e100.h>
 
 // Print a string to the system console.
 // The string is exactly 'len' characters long.
@@ -494,6 +494,29 @@ sys_frame_send(void *srcva, size_t len) {
 	return 0;
 }
 
+static int
+sys_frame_recv(void *dstva)
+{
+	pte_t *ppte = 0;
+	struct Page *pp;
+	int offset = dstva - ROUNDDOWN(dstva, PGSIZE);
+	size_t len;
+
+	if (!dstva)
+		return -E_INVAL;
+
+	if ((uintptr_t)dstva >= UTOP)
+		return -E_INVAL;
+
+	if ( !(pp = page_lookup(curenv->env_pgdir, dstva, &ppte))
+		&& !(*ppte & PTE_P))
+		return -E_INVAL;
+
+	e100_rx(page2kva(pp) + offset, &len);
+
+	return len;
+}
+
 // Dispatches to the correct kernel function, passing the arguments.
 int32_t
 syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5)
@@ -537,8 +560,9 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		return sys_time_msec();
 	case SYS_frame_send:
 		return sys_frame_send((void *)a1, (size_t)a2);
+	case SYS_frame_recv:
+		return sys_frame_recv((void *)a1);
 	default:
 		return -E_INVAL;
 	}
 }
-
