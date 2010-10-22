@@ -1,4 +1,5 @@
 #include "ns.h"
+#include <inc/x86.h>
 
 #define DIAG "output_thread: "
 
@@ -24,7 +25,7 @@ output(envid_t ns_envid) {
 		cprintf(DIAG "Read message responsible for request %08x\n", req);
 
 		ppkt = (struct jif_pkt *) nsipcbuf;
-		if ( (r = sys_frame_send(ppkt->jp_data, ppkt->jp_len)) < 0)
-			panic("sys_frame_send() failed: %e\n", r);
+		while ((r = sys_frame_send(ppkt->jp_data, ppkt->jp_len)) < 0)
+			sys_yield();
 	}
 }

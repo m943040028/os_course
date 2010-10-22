@@ -28,8 +28,8 @@ pgfault(struct UTrapframe *utf)
 	pte = vpt[VPN(addr)];
 
 	if ( !(pte & PTE_COW))
-		panic("%s access to non copy-on-write page\n",
-			(err & FEC_WR) ? "write" : "read");
+		panic("%s access to non copy-on-write page (0x%08x)\n",
+			(err & FEC_WR) ? "write" : "read", addr);
 
 	// Allocate a new page, map it at a temporary location (PFTEMP),
 	// copy the data from the old page to the new page, then move the new

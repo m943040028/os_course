@@ -1,4 +1,5 @@
 #include "ns.h"
+#include <inc/lib.h>
 
 void
 input(envid_t ns_envid) {
@@ -14,8 +15,8 @@ input(envid_t ns_envid) {
 	while (1) {
 		extern uint8_t nsipcbuf[PGSIZE];
 		ppkt = (struct jif_pkt *) nsipcbuf;
-		if ( (ppkt->jp_len = sys_frame_recv(ppkt->jp_data)) < 0)
-			panic("sys_frame_send() failed: %e\n", ppkt->jp_len);
+		while ( (ppkt->jp_len = sys_frame_recv(ppkt->jp_data)) < 0)
+			sys_yield();
 
 		cprintf("%s: read a packet: size=%d\n", binaryname, ppkt->jp_len);
 		ipc_send(ns_envid, NSREQ_INPUT, ppkt, PTE_P|PTE_W|PTE_U);

@@ -24,6 +24,8 @@
 #define E_FILE_EXISTS	13	// File already exists
 #define E_NOT_EXEC	14	// File not a valid executable
 
-#define MAXERROR	14
+#define E_AGAIN		15	// Service temporary not available
+
+#define MAXERROR	15
 
 #endif	// !JOS_INC_ERROR_H */

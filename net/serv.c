@@ -28,7 +28,7 @@
 
 struct netif nif;
 
-#define debug 0
+#define debug 1
 
 struct timer_thread {
     uint32_t msec;

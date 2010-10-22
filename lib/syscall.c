@@ -130,7 +130,7 @@ sys_frame_send(void *srcva, size_t len)
 }
 
 int
-sys_frame_recv(void *srcva)
+sys_frame_recv(void *dstva)
 {
-	return syscall(SYS_frame_recv, 0, (uint32_t)srcva, 0, 0, 0, 0);
+	return syscall(SYS_frame_recv, 0, (uint32_t)dstva, 0, 0, 0, 0);
 }

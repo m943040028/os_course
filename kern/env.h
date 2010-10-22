@@ -26,6 +26,7 @@ int	envid2env(envid_t envid, struct Env **env_store, bool checkperm);
 // The following two functions do not return
 void	env_run(struct Env *e) __attribute__((noreturn));
 void	env_pop_tf(struct Trapframe *tf) __attribute__((noreturn));
+void	env_save_context(struct Env *e);
 
 // For the grading script
 #define ENV_CREATE2(start, size)	{		\

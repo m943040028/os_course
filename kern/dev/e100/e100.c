@@ -5,19 +5,14 @@
 #include <kern/env.h>
 #include <kern/sched.h>
 #include <inc/queue.h>
+#include <inc/error.h>
 
 #include "e100.h"
 static e100_t e100;
 
-void wakeup_one_env(struct wait_queue_head *wait_queue)
-{
-	struct Env *ep;
-	if (!LIST_EMPTY(wait_queue)) {
-		ep = LIST_FIRST(wait_queue);
-		LIST_REMOVE(ep, env_link);
-		ep->env_status = ENV_RUNNABLE;
-	}
-}
+#define IRQ_ENABLE \
+	(CSR_SCB_CMD_INT_FCP_DISABLE|CSR_SCB_CMD_INT_ER_DISABLE |\
+	CSR_SCB_CMD_INT_RNR_DISABLE|CSR_SCB_CMD_INT_CNA_DISABLE)
 
 void e100_int_tx_finish(void)
 {
@@ -36,10 +31,6 @@ void e100_int_tx_finish(void)
 	}
 
 	assert(dev->tx_cb_count >= 0);
-
-	// wake up the environment(s) that waiting for
-	// RX ring space(s).
-	wakeup_one_env(&dev->tx_wait_queue);
 }
 
 void e100_int_rx_finish(void)
@@ -61,10 +52,6 @@ void e100_int_rx_finish(void)
 
 		*tail_cb = KADDR((*tail_cb)->link);
 	}
-
-	// notify the environment who is waiting for packet
-	// to receive
-	wakeup_one_env(&dev->rx_wait_queue);
 }
 
 void e100_int_handler(struct Trapframe *tf)
@@ -73,14 +60,15 @@ void e100_int_handler(struct Trapframe *tf)
 	uint16_t status = e100.read16(&e100, CSR_SCB_STATUS);
 
 	cprintf("status = %08x\n", status);
-	// Ack interrupt
-	e100.write16(&e100, CSR_SCB_STATUS, status);
 
 	if (status & CSR_SCB_STATUS_CX_TNO)
 		e100_int_tx_finish();
 
 	if (status & CSR_SCB_STATUS_FR);
 		e100_int_rx_finish();
+
+	// Ack interrupt
+	e100.write16(&e100, CSR_SCB_STATUS, status);
 }
 
 static void e100_reset(void) {
@@ -155,8 +143,8 @@ uint8_t inline
 e100_read_cu_state(void) {
 	uint32_t status = e100.read32(&e100, CSR_SCB_STATUS);
 
-	return (status & CSR_SCB_STATUS_RU_STATE_MASK)
-		>> CSR_SCB_STATUS_RU_STATE_SHIFT;
+	return (status & CSR_SCB_STATUS_CU_STATE_MASK)
+		>> CSR_SCB_STATUS_CU_STATE_SHIFT;
 }
 
 int
@@ -165,18 +153,15 @@ e100_tx(void *data_ptr, size_t len) {
 	struct cb *cur_cb = dev->cur_tx_cb;
 
 	// All CB is filled, block the environment
-	if (dev->tx_cb_count == NR_TX_CB) {
-		curenv->env_status = ENV_NOT_RUNNABLE;
-		LIST_INSERT_HEAD(&dev->tx_wait_queue, curenv,
-				env_link);
-		sched_yield();
-	}
+	if (dev->tx_cb_count == NR_TX_CB)
+		return -E_AGAIN;
 
 	cur_cb->cmd = CB_CMD_TX|CB_CMD_I;
 	cur_cb->status = 0;
 	// use simplified mode
 	cur_cb->tx_packet.tbd_array_addr = 0xffffffff;
 	cur_cb->tx_packet.byte_count = len;
+
 	// data should be accumulaed in the internal buffer
 	// before being transmitted
 	// this value is granularity of 8bytes
@@ -184,7 +169,7 @@ e100_tx(void *data_ptr, size_t len) {
 	cur_cb->tx_packet.tbd_number = 0;
 	memmove(cur_cb->tx_packet.data, data_ptr, len);
 	dev->tx_cb_count++;
-	
+
 	//start CU
 	if (e100_read_cu_state() != CU_STATE_ACTIVE) {
 		// before trigger cu, we should load h/w offset into 
@@ -192,6 +177,7 @@ e100_tx(void *data_ptr, size_t len) {
 		e100.write32(&e100, CSR_SCB_GENERAL_PTR, PADDR(cur_cb));
 		e100.write16(&e100, CSR_SCB_CMD_WORD, CSR_SCB_CMD_CU_START);
 	}
+	e100.write16(&e100, CSR_SCB_CMD_WORD, CSR_SCB_CMD_SI);
 
 	dev->cur_tx_cb = KADDR(cur_cb->link);
 	return 0;
@@ -201,25 +187,23 @@ int
 e100_rx(void *data_ptr, size_t *len)
 {
 	e100_t *dev = &e100;
-	struct cb *cur_cb = dev->cur_rx_cb;
+	struct cb *cur_cb;
+	uint32_t actual_len;
 
 	// no packet received, block the caller
-	if (dev->rx_cb_count == 0) {
-		curenv->env_status = ENV_NOT_RUNNABLE;
-		LIST_INSERT_HEAD(&dev->rx_wait_queue, curenv,
-				env_link);
-		cprintf("[%08x] waiting for input\n", curenv->env_id);
-		sched_yield();
-	}
-	cprintf("[%08x] waked\n", curenv->env_id);
+	if (dev->rx_cb_count == 0)
+		return -E_AGAIN;
+
+	cur_cb = dev->cur_rx_cb;
+	actual_len = cur_cb->rx_packet.actual_count & CB_COUNT_MASK;
 
 	// OK, pick a packet
-	memmove(data_ptr, cur_cb->rx_packet.data, cur_cb->rx_packet.size);
-	*len = cur_cb->rx_packet.size;
+	memmove(data_ptr, cur_cb->rx_packet.data, actual_len);
+	*len = actual_len;
 
 	// after dev has trnasfered, EOF and F flags should be
 	// cleared to indicated this RFD is free to use by device
-	cur_cb->cmd = CB_CMD_NOP|CB_CMD_S|CB_CMD_EL;	
+	cur_cb->cmd = 0;
 
 	dev->rx_cb_count--;
 	dev->cur_rx_cb = KADDR(cur_cb->link);
@@ -241,8 +225,6 @@ int e100_attach(struct pci_func *pcif)
 	dev->io_size = (uint16_t) pcif->reg_size[1];
 	dev->irq = pcif->irq_line;
 
-	LIST_INIT(&dev->tx_wait_queue);
-	LIST_INIT(&dev->rx_wait_queue);
 	e100_set_io_callbacks(dev);
 
 	e100_reset();
@@ -269,11 +251,7 @@ int e100_attach(struct pci_func *pcif)
 	e100.write16(&e100, CSR_SCB_CMD_WORD, CSR_SCB_CMD_CU_START);
 
 	//Enable CX interrupt and FR interrupt
-	e100.write16(&e100, CSR_SCB_CMD_WORD,
-			CSR_SCB_CMD_INT_FCP_DISABLE |
-			CSR_SCB_CMD_INT_ER_DISABLE |
-			CSR_SCB_CMD_INT_RNR_DISABLE |
-			CSR_SCB_CMD_INT_CNA_DISABLE);
+	e100.write16(&e100, CSR_SCB_CMD_WORD, IRQ_ENABLE);
 
 	//enable interrupt
 	irq_setmask_8259A(irq_mask_8259A & ~(1 << dev->irq));

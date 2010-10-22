@@ -67,7 +67,7 @@ i386_init(void)
 	ENV_CREATE2(TEST, TESTSIZE);
 #else
 	// Touch all you want.
-	ENV_CREATE(user_testtime);
+	ENV_CREATE(user_tcpecho);
 #endif // TEST*
 
 	// Schedule and run the first user environment!

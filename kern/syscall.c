@@ -423,8 +423,7 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 				return r;
 
 			return 1;
-		}
-		else {
+		} else {
 			dst_env->env_ipc_perm = 0;
 			return 0;
 		}
@@ -473,6 +472,7 @@ sys_frame_send(void *srcva, size_t len) {
 	pte_t *ppte = 0;
 	struct Page *pp;
 	int offset = srcva - ROUNDDOWN(srcva, PGSIZE);
+	int ret;
 
 	if (!srcva)
 		return -E_INVAL;
@@ -488,8 +488,9 @@ sys_frame_send(void *srcva, size_t len) {
 		&& !(*ppte & PTE_P))
 		return -E_INVAL;
 
-	// may block
-	e100_tx(page2kva(pp) + offset, len);
+	ret = e100_tx(page2kva(pp) + offset, len);
+	if (ret < 0)
+		return ret;
 
 	return 0;
 }
@@ -501,6 +502,7 @@ sys_frame_recv(void *dstva)
 	struct Page *pp;
 	int offset = dstva - ROUNDDOWN(dstva, PGSIZE);
 	size_t len;
+	int ret;
 
 	if (!dstva)
 		return -E_INVAL;
@@ -512,7 +514,9 @@ sys_frame_recv(void *dstva)
 		&& !(*ppte & PTE_P))
 		return -E_INVAL;
 
-	e100_rx(page2kva(pp) + offset, &len);
+	ret = e100_rx(page2kva(pp) + offset, &len);
+	if (ret < 0)
+		return ret;
 
 	return len;
 }

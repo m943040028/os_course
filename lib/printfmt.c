@@ -35,6 +35,7 @@ static const char * const error_string[MAXERROR + 1] =
 	"invalid path",
 	"file already exists",
 	"file is not a valid executable",
+	"resource temporary available"
 };
 
 /*
