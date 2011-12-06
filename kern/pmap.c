@@ -1319,7 +1319,7 @@ page_check(void)
 	// should be no free memory
 	assert(page_alloc(&pp) == -E_NO_MEM);
 	
-#if 0
+#if 1
 	// should be able to page_insert to change a page
 	// and see the new data immediately.
 	memset(page2kva(pp1), 1, PGSIZE);
